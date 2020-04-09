@@ -45,13 +45,38 @@
  *   M150 P          ; Set LED full brightness
  */
 void GcodeSuite::M150() {
-  leds.set_color(MakeLEDColor(
+  LEDColor color = MakeLEDColor(
     parser.seen('R') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
     parser.seen('U') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
     parser.seen('B') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
     parser.seen('W') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
     parser.seen('P') ? (parser.has_value() ? parser.value_byte() : 255) : neo.brightness()
-  ));
+  );
+  bool singleLED = parser.seen('N');
+  if (singleLED) {
+    if (parser.has_value()) {
+      uint16_t ledIndex = parser.value_byte();
+      if (ledIndex < neo.pixels()) {
+        const uint32_t neocolor = LEDColorWhite() == color
+                                ? neo.Color(NEO_WHITE)
+                                : neo.Color(color.r, color.g, color.b, color.w);
+        neo.set_pixel_color(ledIndex, neocolor);
+        neo.show();
+      }
+      else {
+        SERIAL_ECHOPGM("WARNING: maximum LED index is: ");
+        SERIAL_ECHO(neo.pixels() - 1);
+        SERIAL_EOL();
+      }
+    }
+    else {
+      SERIAL_ECHOPGM("WARNING: no LED-Index specified");
+      SERIAL_EOL();
+    }
+  }
+  else {
+    leds.set_color(color);
+  }
 }
 
 #endif // HAS_COLOR_LEDS
