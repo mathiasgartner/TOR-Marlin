@@ -435,6 +435,7 @@ private:
   #endif
 
   static void G28();
+  static void G28_TOR();
 
   #if HAS_LEVELING
     #if ENABLED(G29_RETRY_AND_RECOVER)

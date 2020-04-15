@@ -518,3 +518,63 @@ void GcodeSuite::G28() {
     }
   #endif
 }
+
+/**
+ * G28_TOR: Home to Z anchor point*
+ */
+void GcodeSuite::G28_TOR() {
+  report_current_position();
+  
+  // Wait for planner moves to finish!
+  planner.synchronize();
+
+  remember_feedrate_scaling_off();
+
+  endstops.enable(true);
+  
+  current_position.reset();
+  destination.reset();
+  sync_plan_position();
+
+  const int16_t defaultPrimaryThreshold = 115;
+  const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
+  SERIAL_ECHOLNPAIR("set threshold to: ", primaryThreshold);
+  stepperX.homing_threshold(primaryThreshold);
+  //stepperY.homing_threshold(primaryThreshold);
+  //stepperZ.homing_threshold(primaryThreshold);
+  
+  sensorless_t stealth_states {
+      tmc_enable_stallguard(stepperX),
+      tmc_enable_stallguard(stepperY),
+      tmc_enable_stallguard(stepperZ)
+    };
+  const char* msg = (std::to_string(stealth_states.x) + " " + std::to_string(stealth_states.y) + " " + std::to_string(stealth_states.z)).c_str();
+  SERIAL_ECHOLN(msg);
+
+  //TODO: two options
+  //      1) disable all other steppers and pull on cords
+  //      2) set position of other steppers to zero 
+  //         and move to max lenght + a few mm
+  //current_position.y = X_BED_SIZE;
+  //current_position.z = sqrt(X_BED_SIZE * X_BED_SIZE + Y_BED_SIZE * Y_BED_SIZE);
+  //current_position.e = Y_BED_SIZE;
+  current_position.x = -500;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+
+  //TODO: tighten other cords
+
+  tmc_disable_stallguard(stepperX, stealth_states.x);
+  tmc_disable_stallguard(stepperY, stealth_states.y);
+  tmc_disable_stallguard(stepperZ, stealth_states.z);
+
+  endstops.validate_homing_move();
+  
+  LOOP_XYZE(i) set_axis_is_at_home((AxisEnum)i);
+  
+  sync_plan_position();
+  
+  restore_feedrate_and_scaling();
+  
+  report_current_position();
+}
