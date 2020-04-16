@@ -532,45 +532,136 @@ void GcodeSuite::G28_TOR() {
 
   endstops.enable(true);
   
-  current_position.reset();
-  destination.reset();
+  float hp = 200;
+  float tightenPosition = 10;
+  float homingPosition = 10;  
+
+  current_position.set(hp, hp, hp, hp);
   sync_plan_position();
+  report_current_position();
 
   const int16_t defaultPrimaryThreshold = 115;
   const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
+  const int16_t defaultSecondaryThreshold = 110;
+  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
   SERIAL_ECHOLNPAIR("set threshold to: ", primaryThreshold);
   stepperX.homing_threshold(primaryThreshold);
-  //stepperY.homing_threshold(primaryThreshold);
-  //stepperZ.homing_threshold(primaryThreshold);
+  stepperY.homing_threshold(primaryThreshold);
+  stepperZ.homing_threshold(primaryThreshold);
+  stepperE0.homing_threshold(primaryThreshold);
   
   sensorless_t stealth_states {
       tmc_enable_stallguard(stepperX),
       tmc_enable_stallguard(stepperY),
-      tmc_enable_stallguard(stepperZ)
+      tmc_enable_stallguard(stepperZ),
+      tmc_enable_stallguard(stepperE0)
     };
-  const char* msg = (std::to_string(stealth_states.x) + " " + std::to_string(stealth_states.y) + " " + std::to_string(stealth_states.z)).c_str();
-  SERIAL_ECHOLN(msg);
 
-  //TODO: two options
+  //TODO: first tighten all cords, 
+//        then two options:
   //      1) disable all other steppers and pull on cords
   //      2) set position of other steppers to zero 
-  //         and move to max lenght + a few mm
+  //         and move to max length + a few mm
   //current_position.y = X_BED_SIZE;
   //current_position.z = sqrt(X_BED_SIZE * X_BED_SIZE + Y_BED_SIZE * Y_BED_SIZE);
   //current_position.e = Y_BED_SIZE;
-  current_position.x = -500;
+
+  //tighten all cords
+  SERIAL_ECHOLN("tighten all cords");
+  
+  SERIAL_ECHOLN("tighten E");
+  current_position.e = tightenPosition;
   line_to_current_position(homing_feedrate(Z_AXIS));
   planner.synchronize();
+  report_current_position();  
+  
+  SERIAL_ECHOLN("tighten Z");
+  current_position.z = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
 
-  //TODO: tighten other cords
+  SERIAL_ECHOLN("tighten Y");
+  current_position.y = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+  
+  SERIAL_ECHOLN("tighten X");
+  current_position.x = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+  
+  bool anchor = false;
+  if (anchor) {
+    //move E to anchor point with disabled steppers X, Y, Z
+    SERIAL_ECHOLN("move E to anchor point with disabled steppers X, Y, Z");
+    DISABLE_AXIS_X();
+    DISABLE_AXIS_Y();
+    DISABLE_AXIS_Z();
+    SERIAL_ECHOLNPAIR("set threshold on X to: ", secondaryThreshold);
+    stepperX.homing_threshold(secondaryThreshold);
+    
+    current_position.set(hp, hp, hp, hp);
+    sync_plan_position();
+    report_current_position();
+    
+    SERIAL_ECHOLN("move to E anchor");
+    current_position.e = homingPosition;
+    line_to_current_position(homing_feedrate(Z_AXIS));
+    planner.synchronize();
+    report_current_position();
+
+    ENABLE_AXIS_X();
+    ENABLE_AXIS_Y();
+    ENABLE_AXIS_Z();
+  }
+
+  bool other = false;
+  if (other) {
+    //tighten other cords
+    SERIAL_ECHOLN("tighten other cords");
+    stepperX.homing_threshold(primaryThreshold);
+    stepperY.homing_threshold(primaryThreshold);
+    stepperZ.homing_threshold(primaryThreshold);
+    stepperE0.homing_threshold(primaryThreshold);
+    
+    current_position.set(hp, hp, hp, hp);
+    sync_plan_position();
+    report_current_position();
+    
+    SERIAL_ECHOLN("tighten Z");
+    current_position.z = homingPosition;
+    line_to_current_position(homing_feedrate(Z_AXIS));
+    planner.synchronize();
+    report_current_position();
+
+    SERIAL_ECHOLN("tighten Y");
+    current_position.y = homingPosition;
+    line_to_current_position(homing_feedrate(Z_AXIS));
+    planner.synchronize();
+    report_current_position();
+    
+    SERIAL_ECHOLN("tighten X");
+    current_position.x = homingPosition;
+    line_to_current_position(homing_feedrate(Z_AXIS));
+    planner.synchronize();
+    report_current_position();
+  }
 
   tmc_disable_stallguard(stepperX, stealth_states.x);
   tmc_disable_stallguard(stepperY, stealth_states.y);
   tmc_disable_stallguard(stepperZ, stealth_states.z);
+  tmc_disable_stallguard(stepperE0, stealth_states.x2); //INFO: this should be the fourth component in struct sensorless_t
 
   endstops.validate_homing_move();
   
-  LOOP_XYZE(i) set_axis_is_at_home((AxisEnum)i);
+  //LOOP_XYZE(i) set_axis_is_at_home((AxisEnum)i);
+  current_position.set(MANUAL_X_HOME_POS, 
+                       MANUAL_Y_HOME_POS, 
+                       MANUAL_Z_HOME_POS, 
+                       MANUAL_E_HOME_POS);
   
   sync_plan_position();
   
@@ -578,3 +669,127 @@ void GcodeSuite::G28_TOR() {
   
   report_current_position();
 }
+
+
+/**
+ * G28_TOR: Home to Z anchor point*
+ */
+/*
+void GcodeSuite::G28_TOR2() {
+  report_current_position();
+  
+  // Wait for planner moves to finish!
+  planner.synchronize();
+
+  remember_feedrate_scaling_off();
+
+  endstops.enable(true);
+  
+  current_position.reset();
+  destination.reset();
+  sync_plan_position();
+
+  current_position.set(200, 
+                       200, 
+                       200, 
+                       200);
+
+  report_current_position();
+
+  const int16_t defaultPrimaryThreshold = 115;
+  const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
+  const int16_t defaultSecondaryThreshold = 110;
+  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
+  SERIAL_ECHOLNPAIR("set threshold to: ", primaryThreshold);
+  stepperX.homing_threshold(primaryThreshold);
+  stepperY.homing_threshold(primaryThreshold);
+  stepperZ.homing_threshold(primaryThreshold);
+  stepperE0.homing_threshold(primaryThreshold);
+  
+  sensorless_t stealth_states {
+      tmc_enable_stallguard(stepperX),
+      tmc_enable_stallguard(stepperY),
+      tmc_enable_stallguard(stepperZ),
+      tmc_enable_stallguard(stepperE0)
+    };
+
+  //TODO: first tighten all cords, 
+//        then two options:
+  //      1) disable all other steppers and pull on cords
+  //      2) set position of other steppers to zero 
+  //         and move to max length + a few mm
+  //current_position.y = X_BED_SIZE;
+  //current_position.z = sqrt(X_BED_SIZE * X_BED_SIZE + Y_BED_SIZE * Y_BED_SIZE);
+  //current_position.e = Y_BED_SIZE;
+
+  //tighten all cords
+  SERIAL_ECHOLN("tighten all cords");
+  float tightenPosition = 10;
+  current_position.x = tightenPosition;
+  current_position.y = tightenPosition;
+  current_position.z = tightenPosition;
+  current_position.e = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  //move X to anchor point with disabled steppers Y, Z and E0
+  SERIAL_ECHOLN("move X to anchor point with disabled steppers Y, Z and E0");
+  DISABLE_AXIS_Y();
+  DISABLE_AXIS_Z();
+  DISABLE_AXIS_E0();
+  SERIAL_ECHOLNPAIR("set threshold on X to: ", secondaryThreshold);
+  stepperX.homing_threshold(secondaryThreshold);
+  
+  current_position.reset();
+  destination.reset();
+  sync_plan_position();
+  
+  float homingPosition = -500;
+  current_position.x = homingPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  ENABLE_AXIS_Y();
+  ENABLE_AXIS_Z();
+  ENABLE_AXIS_E0();
+
+  //tighten other cords
+  SERIAL_ECHOLN("tighten other cords");
+  stepperX.homing_threshold(primaryThreshold);
+  stepperY.homing_threshold(primaryThreshold);
+  stepperZ.homing_threshold(primaryThreshold);
+  stepperE0.homing_threshold(primaryThreshold);
+
+  current_position.reset();
+  destination.reset();
+  sync_plan_position();
+  
+  current_position.y = homingPosition;
+  current_position.z = homingPosition;
+  current_position.e = homingPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  tmc_disable_stallguard(stepperX, stealth_states.x);
+  tmc_disable_stallguard(stepperY, stealth_states.y);
+  tmc_disable_stallguard(stepperZ, stealth_states.z);
+  tmc_disable_stallguard(stepperE0, stealth_states.x2); //INFO: this should be the fourth component in struct sensorless_t
+
+  endstops.validate_homing_move();
+  
+  //LOOP_XYZE(i) set_axis_is_at_home((AxisEnum)i);
+  current_position.set(MANUAL_X_HOME_POS, 
+                       MANUAL_Y_HOME_POS, 
+                       MANUAL_Z_HOME_POS, 
+                       MANUAL_E_HOME_POS);
+  
+  sync_plan_position();
+  
+  restore_feedrate_and_scaling();
+  
+  report_current_position();
+}
+*/
