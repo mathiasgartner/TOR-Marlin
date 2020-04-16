@@ -523,7 +523,49 @@ void GcodeSuite::G28() {
  * G28_TOR: Home to Z anchor point*
  */
 void GcodeSuite::G28_TOR() {
+  float hp = 300;
+  float tightenPosition = 200;
+  float homingPosition = 50;  
+
   report_current_position();
+
+  current_position.set(hp, hp, hp, hp);
+  sync_plan_position();
+  report_current_position();
+  
+  SERIAL_ECHOLNPAIR("just move Z to", tightenPosition);
+  current_position.z = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+  
+  SERIAL_ECHOLNPAIR("just move Z to", hp);
+  current_position.z = hp;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  endstops.enable(true);
+  stepperZ.homing_threshold(50);
+  bool stealth_states_z = tmc_enable_stallguard(stepperZ);
+  
+  SERIAL_ECHOLNPAIR("with stallguard move Z to", tightenPosition);
+  current_position.z = tightenPosition;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  tmc_disable_stallguard(stepperZ, stealth_states_z);
+  //endstops.validate_homing_move();
+  endstops.hit_on_purpose();
+  
+  SERIAL_ECHOLNPAIR("just move Z to", hp);
+  current_position.z = hp;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+
+  return;
   
   // Wait for planner moves to finish!
   planner.synchronize();
@@ -532,9 +574,6 @@ void GcodeSuite::G28_TOR() {
 
   endstops.enable(true);
   
-  float hp = 200;
-  float tightenPosition = 10;
-  float homingPosition = 10;  
 
   current_position.set(hp, hp, hp, hp);
   sync_plan_position();
@@ -568,19 +607,32 @@ void GcodeSuite::G28_TOR() {
 
   //tighten all cords
   SERIAL_ECHOLN("tighten all cords");
-  
+
+  /*
+  abce_pos_t target = planner.get_axis_positions_mm();
+  target.a = hp;
+  target.b = hp;
+  target.c = hp;
+  target.e = hp;
+  planner.set_machine_position_mm(target);
+  target.a = tightenPosition;
+  target.c = tightenPosition;
+
+  planner.buffer_segment(target, homing_feedrate(Z_AXIS), active_extruder);
+  //*/
+  /*
   SERIAL_ECHOLN("tighten E");
   current_position.e = tightenPosition;
   line_to_current_position(homing_feedrate(Z_AXIS));
   planner.synchronize();
   report_current_position();  
-  
+  //*/
   SERIAL_ECHOLN("tighten Z");
   current_position.z = tightenPosition;
   line_to_current_position(homing_feedrate(Z_AXIS));
   planner.synchronize();
   report_current_position();
-
+  /*
   SERIAL_ECHOLN("tighten Y");
   current_position.y = tightenPosition;
   line_to_current_position(homing_feedrate(Z_AXIS));
@@ -592,7 +644,8 @@ void GcodeSuite::G28_TOR() {
   line_to_current_position(homing_feedrate(Z_AXIS));
   planner.synchronize();
   report_current_position();
-  
+  //*/
+
   bool anchor = false;
   if (anchor) {
     //move E to anchor point with disabled steppers X, Y, Z
