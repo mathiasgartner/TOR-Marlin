@@ -519,13 +519,36 @@ void GcodeSuite::G28() {
   #endif
 }
 
+void tor_move_axis(int axis_no, float to) {
+  SERIAL_ECHOLNPAIR("### move axis: ", axis_no);
+  switch(axis_no) {
+    case 0: current_position.x = to; break;
+    case 1: current_position.y = to; break;
+    case 2: current_position.z = to; break;
+    case 3: current_position.e = to; break;
+  }
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+}
+
 /**
  * G28_TOR: Home to Z anchor point*
  */
 void GcodeSuite::G28_TOR() {
-  float hp = 300;
-  float tightenPosition = 200;
-  float homingPosition = 50;  
+  //DISABLE_AXIS_X();
+  //DISABLE_AXIS_Z();
+  //DISABLE_AXIS_E0();
+  
+  float hp = 0;
+  float tightenPosition = 30;
+  float homingPosition = 40;
+  
+  const int16_t defaultPrimaryThreshold = 115;
+  const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
+  const int16_t defaultSecondaryThreshold = 110;
+  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
+  const int16_t axis = parser.seen('A') ? (parser.has_value() ? parser.value_int() : 0) : 0;
 
   report_current_position();
 
@@ -533,38 +556,43 @@ void GcodeSuite::G28_TOR() {
   sync_plan_position();
   report_current_position();
   
-  SERIAL_ECHOLNPAIR("just move Z to", tightenPosition);
-  current_position.z = tightenPosition;
-  line_to_current_position(homing_feedrate(Z_AXIS));
-  planner.synchronize();
-  report_current_position();
-  
-  SERIAL_ECHOLNPAIR("just move Z to", hp);
-  current_position.z = hp;
-  line_to_current_position(homing_feedrate(Z_AXIS));
-  planner.synchronize();
-  report_current_position();
+  tor_move_axis(axis, tightenPosition);
 
+  SERIAL_ECHOLNPAIR("### with stallguard move axis: ", axis);
+  SERIAL_ECHOLNPAIR("### with stallGuard sensitivity: ", primaryThreshold);
   endstops.enable(true);
-  stepperZ.homing_threshold(50);
-  bool stealth_states_z = tmc_enable_stallguard(stepperZ);
-  
-  SERIAL_ECHOLNPAIR("with stallguard move Z to", tightenPosition);
-  current_position.z = tightenPosition;
-  line_to_current_position(homing_feedrate(Z_AXIS));
-  planner.synchronize();
-  report_current_position();
+  //endstops.hit_on_purpose();
+  //endstops.update();
 
-  tmc_disable_stallguard(stepperZ, stealth_states_z);
+  stepperX.homing_threshold(primaryThreshold);
+  stepperY.homing_threshold(primaryThreshold);
+  stepperZ.homing_threshold(primaryThreshold);
+  stepperE0.homing_threshold(primaryThreshold);
+  
+  sensorless_t stealth_states_dummy {
+      tmc_enable_stallguard(stepperX),
+      tmc_enable_stallguard(stepperY),
+      tmc_enable_stallguard(stepperZ),
+      tmc_enable_stallguard(stepperE0)
+    };
+  
+  tor_move_axis(axis, hp);
+  tor_move_axis(axis, tightenPosition);
+  
+  tmc_disable_stallguard(stepperX, stealth_states_dummy.x);
+  tmc_disable_stallguard(stepperY, stealth_states_dummy.y);
+  tmc_disable_stallguard(stepperZ, stealth_states_dummy.z);
+  tmc_disable_stallguard(stepperE0, stealth_states_dummy.x2);
   //endstops.validate_homing_move();
-  endstops.hit_on_purpose();
+  endstops.hit_on_purpose();  
+  endstops.enable(false);
   
-  SERIAL_ECHOLNPAIR("just move Z to", hp);
-  current_position.z = hp;
-  line_to_current_position(homing_feedrate(Z_AXIS));
-  planner.synchronize();
-  report_current_position();
+  tor_move_axis(axis, hp);
 
+  //ENABLE_AXIS_X();
+  //ENABLE_AXIS_Z();
+  //ENABLE_AXIS_E0();
+  
   return;
   
   // Wait for planner moves to finish!
@@ -578,11 +606,7 @@ void GcodeSuite::G28_TOR() {
   current_position.set(hp, hp, hp, hp);
   sync_plan_position();
   report_current_position();
-
-  const int16_t defaultPrimaryThreshold = 115;
-  const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
-  const int16_t defaultSecondaryThreshold = 110;
-  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
+  
   SERIAL_ECHOLNPAIR("set threshold to: ", primaryThreshold);
   stepperX.homing_threshold(primaryThreshold);
   stepperY.homing_threshold(primaryThreshold);
@@ -711,11 +735,11 @@ void GcodeSuite::G28_TOR() {
   endstops.validate_homing_move();
   
   //LOOP_XYZE(i) set_axis_is_at_home((AxisEnum)i);
-  current_position.set(MANUAL_X_HOME_POS, 
+  /*current_position.set(MANUAL_X_HOME_POS, 
                        MANUAL_Y_HOME_POS, 
                        MANUAL_Z_HOME_POS, 
                        MANUAL_E_HOME_POS);
-  
+  */
   sync_plan_position();
   
   restore_feedrate_and_scaling();
