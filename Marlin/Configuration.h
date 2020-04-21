@@ -1092,17 +1092,26 @@
 
 // @section machine
 
+//TOR dimensions
+#define TOR_ANCHOR_X_Y  230.0
+#define TOR_ANCHOR_Y_Z  230.0
+#define TOR_HEIGHT      210.0
+#define TOR_DIAGONAL_2D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_Y_Z * TOR_ANCHOR_Y_Z)
+#define TOR_DIAGONAL_3D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_Y_Z * TOR_ANCHOR_Y_Z + TOR_HEIGHT * TOR_HEIGHT)
+
 // The size of the print bed
-#define X_BED_SIZE 341.028
-#define Y_BED_SIZE 341.028
+#define X_BED_SIZE TOR_DIAGONAL_3D
+#define Y_BED_SIZE TOR_DIAGONAL_3D
 
 // Travel limits (mm) after homing, corresponding to endstop positions.
 #define X_MIN_POS 0
 #define Y_MIN_POS 0
 #define Z_MIN_POS 0
+#define E0_MIN_POS 0
 #define X_MAX_POS X_BED_SIZE
 #define Y_MAX_POS Y_BED_SIZE
-#define Z_MAX_POS 341.028
+#define Z_MAX_POS TOR_DIAGONAL_3D
+#define E0_MAX_POS TOR_DIAGONAL_3D
 
 /**
  * Software Endstops
@@ -1346,8 +1355,8 @@
 // For DELTA this is the top-center of the Cartesian print volume.
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS 230
-#define MANUAL_E_HOME_POS 230
-#define MANUAL_Z_HOME_POS SQRT(MANUAL_Y_HOME_POS * MANUAL_Y_HOME_POS + MANUAL_E_HOME_POS * MANUAL_E_HOME_POS)
+#define MANUAL_E0_HOME_POS 230
+#define MANUAL_Z_HOME_POS SQRT(MANUAL_Y_HOME_POS * MANUAL_Y_HOME_POS + MANUAL_E0_HOME_POS * MANUAL_E0_HOME_POS)
 
 // Use "Z Safe Homing" to avoid homing with a Z probe outside the bed area.
 //
