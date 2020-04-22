@@ -522,10 +522,10 @@ void GcodeSuite::G28() {
 void tor_move_axis(int axis_no, float to) {
   SERIAL_ECHOLNPAIR("### move axis: ", axis_no);
   switch(axis_no) {
-    case 0: current_position.x = to; break;
-    case 1: current_position.y = to; break;
-    case 2: current_position.z = to; break;
-    case 3: current_position.e = to; break;
+    case X_AXIS: current_position.x = to; break;
+    case Y_AXIS: current_position.y = to; break;
+    case Z_AXIS: current_position.z = to; break;
+    case E_AXIS: current_position.e = to; break;
   }
   line_to_current_position(homing_feedrate(Z_AXIS));
   planner.synchronize();
@@ -592,11 +592,11 @@ void GcodeSuite::G28_TOR() {
   
   float hp = 1.5 * X_BED_SIZE;
   float tightenPosition = 0;
-  float homingPosition = 0;
+  float x_release_position = 2;
   
   const int16_t defaultPrimaryThreshold = 115;
   const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
-  const int16_t defaultSecondaryThreshold = 75;
+  const int16_t defaultSecondaryThreshold = 70;
   const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
   const int16_t mode = parser.seen('M') ? (parser.has_value() ? parser.value_int() : 0) : 0;
   //0: just homing
@@ -606,8 +606,9 @@ void GcodeSuite::G28_TOR() {
   planner.synchronize();
 
   if (mode == 1) {
-    //move to center    
-    tor_move_to(0.9 * MANUAL_Y_HOME_POS, 0.9 * MANUAL_Y_HOME_POS, 0.9 * MANUAL_Y_HOME_POS, 0.9 * MANUAL_Y_HOME_POS);
+    //move to center 
+    float factor = 0.8;  
+    tor_move_to(factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS);
   }  
 
   //tighten X and Y
@@ -626,7 +627,12 @@ void GcodeSuite::G28_TOR() {
   ENABLE_AXIS_Z();
   ENABLE_AXIS_E0();
 
-  //tighten X
+  //release X slightly
+  report_current_position();
+  tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
+  tor_move_axis(X_AXIS, x_release_position);
+  
+  //tighten Y
   report_current_position();
   tor_set_position(hp);
   move_with_stallGuard(current_position.x, tightenPosition, current_position.z, current_position.e, primaryThreshold);
