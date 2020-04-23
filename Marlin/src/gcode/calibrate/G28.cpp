@@ -598,7 +598,7 @@ void GcodeSuite::G28_TOR() {
   const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
   const int16_t defaultSecondaryThreshold = 70;
   const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
-  const int16_t mode = parser.seen('M') ? (parser.has_value() ? parser.value_int() : 0) : 0;
+  const int16_t mode = parser.seen('A') ? (parser.has_value() ? parser.value_int() : 0) : 0;
   //0: just homing
   //1: first go to center, do this only when position is nearly known!
 
