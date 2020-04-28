@@ -1003,6 +1003,7 @@ inline bool line_to_destination_tor_segmented() {
   //  const float inv_duration = scaled_fr_mm_s / cartesian_segment_mm;
   //#endif
 
+  SERIAL_ECHOPAIR("### do a segmented move with ", segments, " segments");
   /*
   SERIAL_ECHOPAIR("mm=", cartesian_mm);
   SERIAL_ECHOPAIR(" seconds=", seconds);
