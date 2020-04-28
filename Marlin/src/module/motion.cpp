@@ -949,6 +949,94 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
 #endif // !IS_KINEMATIC
 #endif // !UBL_SEGMENTED
 
+//TOR: do a segmented move 
+//adapted from line_to_destination_kinematic()
+inline bool line_to_destination_tor_segmented() {
+
+  // Get the top feedrate of the move in the XY plane
+  const float scaled_fr_mm_s = MMS_SCALED(feedrate_mm_s);
+
+  const xyze_float_t diff = destination - current_position;
+
+  // If the move is only in Z/E don't split up the move
+  //if (!diff.x && !diff.y) {
+  //  planner.buffer_line(destination, scaled_fr_mm_s, active_extruder);
+  //  return false; // caller will update current_position
+  //}
+
+  // Fail if attempting move outside printable radius
+  //if (!position_is_reachable(destination)) return true;
+
+  // Get the linear distance in XYZE
+  float cartesian_mm = diff.magnitude();
+
+  // If the move is very short, check the E move distance
+  //if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e);
+
+  // No E move either? Game over.
+  //if (UNEAR_ZERO(cartesian_mm)) return true;
+
+  // Minimum number of seconds to move the given distance
+  //const float seconds = cartesian_mm / scaled_fr_mm_s;
+
+  // The number of segments-per-second times the duration
+  // gives the number of segments
+  //uint16_t segments = delta_segments_per_second * seconds;
+
+  // Every segment is 1 mm
+  uint16_t segments = cartesian_mm;
+
+  // For SCARA enforce a minimum segment size
+  //#if IS_SCARA
+  //  NOMORE(segments, cartesian_mm * RECIPROCAL(SCARA_MIN_SEGMENT_LENGTH));
+  //#endif
+
+  // At least one segment is required
+  NOLESS(segments, 1U);
+
+  // The approximate length of each segment
+  const float inv_segments = 1.0f / float(segments),
+              cartesian_segment_mm = cartesian_mm * inv_segments;
+  const xyze_float_t segment_distance = diff * inv_segments;
+
+  //#if ENABLED(SCARA_FEEDRATE_SCALING)
+  //  const float inv_duration = scaled_fr_mm_s / cartesian_segment_mm;
+  //#endif
+
+  /*
+  SERIAL_ECHOPAIR("mm=", cartesian_mm);
+  SERIAL_ECHOPAIR(" seconds=", seconds);
+  SERIAL_ECHOPAIR(" segments=", segments);
+  SERIAL_ECHOPAIR(" segment_mm=", cartesian_segment_mm);
+  SERIAL_EOL();
+  //*/
+
+  // Get the current position as starting point
+  xyze_pos_t raw = current_position;
+
+  // Calculate and execute the segments
+  millis_t next_idle_ms = millis() + 200UL;
+  while (--segments) {
+    segment_idle(next_idle_ms);
+    raw += segment_distance;
+    if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+      #if ENABLED(SCARA_FEEDRATE_SCALING)
+        , inv_duration
+      #endif
+    ))
+      break;
+  }
+
+  // Ensure last segment arrives at target location.
+  planner.buffer_line(destination, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+    #if ENABLED(SCARA_FEEDRATE_SCALING)
+      , inv_duration
+    #endif
+  );
+
+  return false; // caller will update current_position
+}
+
 #if HAS_DUPLICATION_MODE
   bool extruder_duplication_enabled,
        mirrored_duplication_mode;
@@ -1113,7 +1201,9 @@ void prepare_line_to_destination() {
     #elif IS_KINEMATIC
       line_to_destination_kinematic()
     #else
-      line_to_destination_cartesian()
+      (parser.seen('S') && line_to_destination_tor_segmented()) 
+      ||
+      (line_to_destination_cartesian())
     #endif
   ) return;
 
