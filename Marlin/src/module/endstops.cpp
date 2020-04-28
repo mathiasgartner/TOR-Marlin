@@ -176,6 +176,16 @@ void Endstops::init() {
     #endif
   #endif
 
+  #if HAS_E0_MIN
+    #if ENABLED(ENDSTOPPULLUP_E0MIN)
+      SET_INPUT_PULLUP(E0_MIN_PIN);
+    #elif ENABLED(ENDSTOPPULLDOWN_E0MIN)
+      SET_INPUT_PULLDOWN(E0_MIN_PIN);
+    #else
+      SET_INPUT(E0_MIN_PIN);
+    #endif
+  #endif
+
   #if HAS_X_MAX
     #if ENABLED(ENDSTOPPULLUP_XMAX)
       SET_INPUT_PULLUP(X_MAX_PIN);
@@ -472,6 +482,12 @@ void _O2 Endstops::report_states() {
   #endif
   #if HAS_Z4_MAX
     ES_REPORT(Z4_MAX);
+  #endif
+  #if HAS_E0_MIN
+    ES_REPORT(E0_MIN);
+  #endif
+  #if HAS_E0_MAX
+    ES_REPORT(E0_MAX);
   #endif
   #if HAS_CUSTOM_PROBE_PIN
     print_es_state(READ(Z_MIN_PROBE_PIN) != Z_MIN_PROBE_ENDSTOP_INVERTING, PSTR(STR_Z_PROBE));

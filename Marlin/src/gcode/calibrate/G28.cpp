@@ -611,10 +611,16 @@ void GcodeSuite::G28_TOR() {
     tor_move_to(factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS);
   }  
 
-  //tighten X and Y
+  //tighten all
   report_current_position();
   tor_set_position(hp);
-  move_with_stallGuard(tightenPosition, tightenPosition, current_position.z, current_position.e, primaryThreshold);
+  move_with_stallGuard(tightenPosition, current_position.y, current_position.z, current_position.e, primaryThreshold);
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, tightenPosition, current_position.z, current_position.e, primaryThreshold);
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, current_position.y, tightenPosition, current_position.e, primaryThreshold);
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, current_position.y, current_position.z, tightenPosition, primaryThreshold);
   
   //move to X anchor and pull on Y, Z, E
   DISABLE_AXIS_Y();
@@ -636,6 +642,14 @@ void GcodeSuite::G28_TOR() {
   report_current_position();
   tor_set_position(hp);
   move_with_stallGuard(current_position.x, tightenPosition, current_position.z, current_position.e, primaryThreshold);
+  //tighten Z
+  report_current_position();
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, current_position.y, tightenPosition, current_position.e, primaryThreshold);
+  //tighten E0
+  report_current_position();
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, current_position.y, current_position.z, tightenPosition, primaryThreshold);
 
   tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
 }
