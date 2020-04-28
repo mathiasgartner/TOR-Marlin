@@ -518,3 +518,124 @@ void GcodeSuite::G28() {
     }
   #endif
 }
+
+void tor_move_axis(int axis_no, float to) {
+  SERIAL_ECHOLNPAIR("### move axis: ", axis_no);
+  switch(axis_no) {
+    case X_AXIS: current_position.x = to; break;
+    case Y_AXIS: current_position.y = to; break;
+    case Z_AXIS: current_position.z = to; break;
+    case E_AXIS: current_position.e = to; break;
+  }
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+}
+
+void tor_move_to(float x, float y, float z, float e) {
+  current_position.x = x;
+  current_position.y = y;
+  current_position.z = z;
+  current_position.e = e;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+}
+
+void tor_set_position(float x, float y, float z, float e) {  
+  current_position.set(x, y, z, e);
+  sync_plan_position();
+  report_current_position();
+}
+
+void tor_set_position(float pos) {  
+  tor_set_position(pos, pos, pos, pos);
+}
+
+void move_with_stallGuard(float x, float y, float z, float e, int16_t threshold) {
+  SERIAL_ECHOLNPAIR("### move with threshold: ", threshold);
+  endstops.enable(true);
+
+  stepperX.homing_threshold(threshold);
+  stepperY.homing_threshold(threshold);
+  stepperZ.homing_threshold(threshold);
+  stepperE0.homing_threshold(threshold);
+
+  sensorless_t stealth_states_dummy {
+      tmc_enable_stallguard(stepperX),
+      tmc_enable_stallguard(stepperY),
+      tmc_enable_stallguard(stepperZ),
+      tmc_enable_stallguard(stepperE0)
+    };
+
+  current_position.x = x;
+  current_position.y = y;
+  current_position.z = z;
+  current_position.e = e;
+  line_to_current_position(homing_feedrate(Z_AXIS));
+  planner.synchronize();
+  report_current_position();
+  
+  tmc_disable_stallguard(stepperX, stealth_states_dummy.x);
+  tmc_disable_stallguard(stepperY, stealth_states_dummy.y);
+  tmc_disable_stallguard(stepperZ, stealth_states_dummy.z);
+  tmc_disable_stallguard(stepperE0, stealth_states_dummy.x2);
+
+  endstops.hit_on_purpose();
+  endstops.enable(false);
+}
+
+/**
+ * G28_TOR: Home to Z anchor point*
+ */
+void GcodeSuite::G28_TOR() {
+  
+  float hp = 1.5 * X_BED_SIZE;
+  float tightenPosition = 0;
+  float x_release_position = 2;
+  
+  const int16_t defaultPrimaryThreshold = 115;
+  const int16_t primaryThreshold = parser.seen('T') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
+  const int16_t defaultSecondaryThreshold = 70;
+  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
+  const int16_t mode = parser.seen('A') ? (parser.has_value() ? parser.value_int() : 0) : 0;
+  //0: just homing
+  //1: first go to center, do this only when position is nearly known!
+
+  // Wait for planner moves to finish!
+  planner.synchronize();
+
+  if (mode == 1) {
+    //move to center 
+    float factor = 0.8;  
+    tor_move_to(factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS, factor * MANUAL_Y_HOME_POS);
+  }  
+
+  //tighten X and Y
+  report_current_position();
+  tor_set_position(hp);
+  move_with_stallGuard(tightenPosition, tightenPosition, current_position.z, current_position.e, primaryThreshold);
+  
+  //move to X anchor and pull on Y, Z, E
+  DISABLE_AXIS_Y();
+  DISABLE_AXIS_Z();
+  DISABLE_AXIS_E0();
+  report_current_position();
+  tor_set_position(hp);
+  move_with_stallGuard(tightenPosition, current_position.y, current_position.z, current_position.e, secondaryThreshold);
+  ENABLE_AXIS_Y();
+  ENABLE_AXIS_Z();
+  ENABLE_AXIS_E0();
+
+  //release X slightly
+  report_current_position();
+  tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
+  tor_move_axis(X_AXIS, x_release_position);
+  
+  //tighten Y
+  report_current_position();
+  tor_set_position(hp);
+  move_with_stallGuard(current_position.x, tightenPosition, current_position.z, current_position.e, primaryThreshold);
+
+  tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
+}

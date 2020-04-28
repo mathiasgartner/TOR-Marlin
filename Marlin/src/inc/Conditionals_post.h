@@ -200,6 +200,12 @@
   #define Z_HOME_POS (Z_HOME_DIR < 0 ? Z_MIN_POS : Z_MAX_POS)
 #endif
 
+#ifdef MANUAL_E0_HOME_POS
+  #define E0_HOME_POS MANUAL_E0_HOME_POS
+#else
+  #define E0_HOME_POS (E0_HOME_DIR < 0 ? E0_MIN_POS : E0_MAX_POS)
+#endif
+
 /**
  * If DELTA_HEIGHT isn't defined use the old setting
  */

@@ -1573,6 +1573,7 @@ void Planner::quick_stop() {
 
 void Planner::endstop_triggered(const AxisEnum axis) {
   // Record stepper position and discard the current block
+  SERIAL_ECHOLNPAIR("######################process enstop axis: ", axis);
   stepper.endstop_triggered(axis);
 }
 
@@ -1724,7 +1725,7 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
     constexpr int32_t de = 0;
   #endif
 
-  /* <-- add a slash to enable
+  //* <-- add a slash to enable
     SERIAL_ECHOLNPAIR("  _populate_block FR:", fr_mm_s,
                       " A:", target.a, " (", da, " steps)"
                       " B:", target.b, " (", db, " steps)"
@@ -2610,7 +2611,7 @@ bool Planner::buffer_segment(const float &a, const float &b, const float &c, con
     #endif
   }
 
-  /* <-- add a slash to enable
+  //* <-- add a slash to enable
     SERIAL_ECHOPAIR("  buffer_segment FR:", fr_mm_s);
     #if IS_KINEMATIC
       SERIAL_ECHOPAIR(" A:", a);

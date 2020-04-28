@@ -647,9 +647,9 @@
 #endif
 
 // Mechanical endstop with COM to ground and NC to Signal uses "false" here (most common setup).
-#define X_MIN_ENDSTOP_INVERTING true  // Set to true to invert the logic of the endstop.
-#define Y_MIN_ENDSTOP_INVERTING true  // Set to true to invert the logic of the endstop.
-#define Z_MIN_ENDSTOP_INVERTING true  // Set to true to invert the logic of the endstop.
+#define X_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
+#define Y_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
+#define Z_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
 #define X_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
 #define Y_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
 #define Z_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
@@ -829,7 +829,7 @@
  *
  * Enable this option for a probe connected to the Z Min endstop pin.
  */
-#define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
+//#define Z_MIN_PROBE_USES_Z_MIN_ENDSTOP_PIN
 
 /**
  * Z_MIN_PROBE_PIN
@@ -1092,17 +1092,26 @@
 
 // @section machine
 
+//TOR dimensions
+#define TOR_ANCHOR_X_Y  246.0
+#define TOR_ANCHOR_X_E0  246.0
+#define TOR_HEIGHT      210.0 //verify this value
+#define TOR_DIAGONAL_2D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0)
+#define TOR_DIAGONAL_3D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + TOR_HEIGHT * TOR_HEIGHT)
+
 // The size of the print bed
-#define X_BED_SIZE 341.028
-#define Y_BED_SIZE 341.028
+#define X_BED_SIZE TOR_DIAGONAL_3D
+#define Y_BED_SIZE TOR_DIAGONAL_3D
 
 // Travel limits (mm) after homing, corresponding to endstop positions.
 #define X_MIN_POS 0
 #define Y_MIN_POS 0
 #define Z_MIN_POS 0
+#define E0_MIN_POS 0
 #define X_MAX_POS X_BED_SIZE
 #define Y_MAX_POS Y_BED_SIZE
-#define Z_MAX_POS 341.028
+#define Z_MAX_POS TOR_DIAGONAL_3D
+#define E0_MAX_POS TOR_DIAGONAL_3D
 
 /**
  * Software Endstops
@@ -1220,7 +1229,7 @@
  * Turn on with the command 'M111 S32'.
  * NOTE: Requires a lot of PROGMEM!
  */
-//#define DEBUG_LEVELING_FEATURE
+#define DEBUG_LEVELING_FEATURE
 
 #if ANY(MESH_BED_LEVELING, AUTO_BED_LEVELING_BILINEAR, AUTO_BED_LEVELING_UBL)
   // Gradually reduce leveling correction until a set height is reached,
@@ -1344,9 +1353,10 @@
 
 // Manually set the home position. Leave these undefined for automatic settings.
 // For DELTA this is the top-center of the Cartesian print volume.
-//#define MANUAL_X_HOME_POS 0
-//#define MANUAL_Y_HOME_POS 0
-//#define MANUAL_Z_HOME_POS 0
+#define MANUAL_X_HOME_POS 0
+#define MANUAL_Y_HOME_POS TOR_ANCHOR_X_Y
+#define MANUAL_Z_HOME_POS TOR_DIAGONAL_2D
+#define MANUAL_E0_HOME_POS TOR_ANCHOR_X_E0
 
 // Use "Z Safe Homing" to avoid homing with a Z probe outside the bed area.
 //
@@ -1682,7 +1692,7 @@
  * Disable all menus and only display the Status Screen, or
  * just remove some extraneous menu items to recover space.
  */
-//#define NO_LCD_MENUS
+#define NO_LCD_MENUS
 //#define SLIM_LCD_MENUS
 
 //

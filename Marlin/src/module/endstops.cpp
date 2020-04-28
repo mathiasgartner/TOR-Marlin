@@ -769,6 +769,7 @@ void Endstops::update() {
   if (stepper.axis_is_moving(X_AXIS)) {
     if (stepper.motor_direction(X_AXIS_HEAD)) { // -direction
       #if HAS_X_MIN || (X_SPI_SENSORLESS && X_HOME_DIR < 0)
+        //SERIAL_ECHOLN("process enstop X");
         PROCESS_ENDSTOP_X(MIN);
       #endif
     }
@@ -802,7 +803,10 @@ void Endstops::update() {
           #elif HAS_CUSTOM_PROBE_PIN
             && !z_probe_enabled
           #endif
-        ) PROCESS_ENDSTOP_Z(MIN);
+        ) {
+          //SERIAL_ECHOLN("process enstop Z"); 
+          PROCESS_ENDSTOP_Z(MIN);
+        }          
       #endif
 
       // When closing the gap check the enabled probe
