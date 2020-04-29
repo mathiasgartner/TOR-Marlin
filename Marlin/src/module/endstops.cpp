@@ -716,9 +716,7 @@ void Endstops::update() {
 
   // Call the endstop triggered routine for single endstops
   #define PROCESS_ENDSTOP(AXIS, MINMAX) do { \
-    //SERIAL_ECHOLNPAIR("##### TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX)):", TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))); \
     if (TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))) { \
-      //SERIAL_ECHOLN("###### set endstop hit bit"); \
       _ENDSTOP_HIT(AXIS, MINMAX); \
       planner.endstop_triggered(_AXIS(AXIS)); \
     } \
