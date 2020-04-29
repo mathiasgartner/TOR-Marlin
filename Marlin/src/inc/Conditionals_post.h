@@ -1211,6 +1211,9 @@
   #if ENABLED(USE_ZMIN_PLUG)
     #define ENDSTOPPULLUP_ZMIN
   #endif
+  #if ENABLED(USE_E0MIN_PLUG)
+    #define ENDSTOPPULLUP_E0MIN
+  #endif
 #endif
 
 /**

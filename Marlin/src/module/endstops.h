@@ -28,9 +28,11 @@
 #include "../inc/MarlinConfig.h"
 #include <stdint.h>
 
+//INFO: this is reordered such that X, Y, Z and E axis bits fit into the 8 bit datatype esbits_t
 enum EndstopEnum : char {
-  X_MIN,  Y_MIN,  Z_MIN,  Z_MIN_PROBE,
-  X_MAX,  Y_MAX,  Z_MAX,
+  X_MIN,  Y_MIN,  Z_MIN, E0_MIN,
+  X_MAX,  Y_MAX,  Z_MAX, E0_MAX,
+  Z_MIN_PROBE,
   X2_MIN, X2_MAX,
   Y2_MIN, Y2_MAX,
   Z2_MIN, Z2_MAX,

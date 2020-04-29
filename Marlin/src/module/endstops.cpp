@@ -568,6 +568,7 @@ void Endstops::update() {
   #else
     #define Z_AXIS_HEAD Z_AXIS
   #endif
+  #define E0_AXIS_HEAD E0_AXIS
 
   /**
    * Check and update endstops
@@ -674,6 +675,14 @@ void Endstops::update() {
       UPDATE_ENDSTOP_BIT(Z, MAX);
     #endif
   #endif
+  
+  #if HAS_E0_MIN && !E0_SPI_SENSORLESS
+    UPDATE_ENDSTOP_BIT(E0, MIN);
+  #endif
+
+  #if HAS_E0_MAX && !E0_SPI_SENSORLESS
+    UPDATE_ENDSTOP_BIT(E0, MAX);
+  #endif
 
   #if ENDSTOP_NOISE_THRESHOLD
 
@@ -707,7 +716,9 @@ void Endstops::update() {
 
   // Call the endstop triggered routine for single endstops
   #define PROCESS_ENDSTOP(AXIS, MINMAX) do { \
+    //SERIAL_ECHOLNPAIR("##### TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX)):", TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))); \
     if (TEST_ENDSTOP(_ENDSTOP(AXIS, MINMAX))) { \
+      //SERIAL_ECHOLN("###### set endstop hit bit"); \
       _ENDSTOP_HIT(AXIS, MINMAX); \
       planner.endstop_triggered(_AXIS(AXIS)); \
     } \
@@ -766,6 +777,9 @@ void Endstops::update() {
     #define PROCESS_ENDSTOP_Z(MINMAX) PROCESS_DUAL_ENDSTOP(Z, MINMAX)
   #endif
 
+  
+  #define PROCESS_ENDSTOP_E0(MINMAX) PROCESS_ENDSTOP(E0, MINMAX)
+
   #if ENABLED(G38_PROBE_TARGET) && PIN_EXISTS(Z_MIN_PROBE) && !(CORE_IS_XY || CORE_IS_XZ)
     #if ENABLED(G38_PROBE_AWAY)
       #define _G38_OPEN_STATE (G38_move >= 4)
@@ -785,7 +799,7 @@ void Endstops::update() {
   if (stepper.axis_is_moving(X_AXIS)) {
     if (stepper.motor_direction(X_AXIS_HEAD)) { // -direction
       #if HAS_X_MIN || (X_SPI_SENSORLESS && X_HOME_DIR < 0)
-        //SERIAL_ECHOLN("process enstop X");
+        //SERIAL_ECHOLN("process endstop X");
         PROCESS_ENDSTOP_X(MIN);
       #endif
     }
@@ -800,6 +814,7 @@ void Endstops::update() {
     if (stepper.motor_direction(Y_AXIS_HEAD)) { // -direction
       #if HAS_Y_MIN || (Y_SPI_SENSORLESS && Y_HOME_DIR < 0)
         PROCESS_ENDSTOP_Y(MIN);
+        //SERIAL_ECHOLN("process enstop Y");
       #endif
     }
     else { // +direction
@@ -820,7 +835,7 @@ void Endstops::update() {
             && !z_probe_enabled
           #endif
         ) {
-          //SERIAL_ECHOLN("process enstop Z"); 
+          //SERIAL_ECHOLN("process endstop Z"); 
           PROCESS_ENDSTOP_Z(MIN);
         }          
       #endif
@@ -837,6 +852,23 @@ void Endstops::update() {
         #elif !HAS_CUSTOM_PROBE_PIN || Z_MAX_PIN != Z_MIN_PROBE_PIN  // No probe or probe is Z_MIN || Probe is not Z_MAX
           PROCESS_ENDSTOP(Z, MAX);
         #endif
+      #endif
+    }
+  }
+
+  //SERIAL_ECHOLN("# check if E0 is moving");
+  if (stepper.axis_is_moving(E0_AXIS)) {
+    //SERIAL_ECHOLN("## E0 is moving");
+    if (stepper.motor_direction(E0_AXIS_HEAD)) { // -direction
+      //SERIAL_ECHOLN("### E0 moving to endstop");
+      #if HAS_E0_MIN || (E0_SPI_SENSORLESS && E0_HOME_DIR < 0)
+        //SERIAL_ECHOLN("#### process enstop E0");
+        PROCESS_ENDSTOP_E0(MIN);
+      #endif
+    }
+    else { // +direction
+      #if HAS_E0_MAX || (E0_SPI_SENSORLESS && E0_HOME_DIR > 0)
+        PROCESS_ENDSTOP_E0(MAX);
       #endif
     }
   }
@@ -924,6 +956,12 @@ void Endstops::update() {
     #if HAS_Z_MAX
       ES_GET_STATE(Z_MAX);
     #endif
+    #if HAS_E0_MIN
+      ES_GET_STATE(E0_MIN);
+    #endif
+    #if HAS_E0_MAX
+      ES_GET_STATE(E0_MAX);
+    #endif
     #if HAS_Z_MIN_PROBE_PIN
       ES_GET_STATE(Z_MIN_PROBE);
     #endif
@@ -979,6 +1017,12 @@ void Endstops::update() {
       #endif
       #if HAS_Z_MAX
         ES_REPORT_CHANGE(Z_MAX);
+      #endif
+      #if HAS_E0_MIN
+        ES_REPORT_CHANGE(E0_MIN);
+      #endif
+      #if HAS_E0_MAX
+        ES_REPORT_CHANGE(E0_MAX);
       #endif
       #if HAS_Z_MIN_PROBE_PIN
         ES_REPORT_CHANGE(Z_MIN_PROBE);
