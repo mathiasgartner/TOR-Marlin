@@ -1171,6 +1171,24 @@
   #define Z_STOP_PIN Z_MAX_PIN
 #endif
 
+#ifdef E0_STOP_PIN
+  #if E0_HOME_DIR < 0
+    #define E0_MIN_PIN E0_STOP_PIN
+    #ifndef E0_MAX_PIN
+      #define E0_MAX_PIN -1
+    #endif
+  #else
+    #define E0_MAX_PIN E0_STOP_PIN
+    #ifndef E0_MIN_PIN
+      #define E0_MIN_PIN -1
+    #endif
+  #endif
+#elif E0_HOME_DIR < 0
+  #define E0_STOP_PIN E0_MIN_PIN
+#else
+  #define E0_STOP_PIN E0_MAX_PIN
+#endif
+
 //
 // Disable unused endstop / probe pins
 //

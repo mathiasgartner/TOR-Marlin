@@ -48,6 +48,7 @@
 #define X_STOP_PIN                          PC0
 #define Y_STOP_PIN                          PC1
 #define Z_STOP_PIN                          PC2
+#define E0_STOP_PIN                         PC3
 
 //
 // Z Probe must be this pins
@@ -84,7 +85,8 @@
 // Temperature Sensors
 //
 #define TEMP_0_PIN                          PA0   // Analog Input
-#define TEMP_BED_PIN                        PC3   // Analog Input
+//we do not need bed heating in TOR and use this pin as E0 endstop
+//#define TEMP_BED_PIN                        PC3   // Analog Input
 
 //
 // Heaters / Fans
