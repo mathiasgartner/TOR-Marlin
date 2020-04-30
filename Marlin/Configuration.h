@@ -1363,6 +1363,11 @@
 #define MANUAL_Z_HOME_POS TOR_DIAGONAL_2D
 #define MANUAL_E0_HOME_POS TOR_ANCHOR_X_E0
 
+#define ANCHOR_X_POS {0, TOR_ANCHOR_X_Y, TOR_DIAGONAL_2D, TOR_ANCHOR_X_E0}
+#define ANCHOR_Y_POS {TOR_ANCHOR_X_Y, 0, TOR_ANCHOR_X_E0, TOR_DIAGONAL_2D}
+#define ANCHOR_Z_POS {TOR_DIAGONAL_2D, TOR_ANCHOR_X_E0, 0, TOR_ANCHOR_X_Y}
+#define ANCHOR_E0_POS {TOR_ANCHOR_X_E0, TOR_DIAGONAL_2D, TOR_ANCHOR_X_Y, 0}
+
 // Use "Z Safe Homing" to avoid homing with a Z probe outside the bed area.
 //
 // With this feature enabled:

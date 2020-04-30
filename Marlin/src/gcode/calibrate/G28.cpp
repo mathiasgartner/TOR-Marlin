@@ -526,12 +526,13 @@ void tor_move_to_current_position() {
 }
 
 void tor_move_axis(AxisEnum axis_no, float to) {
-  SERIAL_ECHOLNPAIR("### move axis: ", axis_no);
+  //SERIAL_ECHOLNPAIR("### move axis: ", axis_no);
   switch(axis_no) {
     case X_AXIS: current_position.x = to; break;
     case Y_AXIS: current_position.y = to; break;
     case Z_AXIS: current_position.z = to; break;
     case E_AXIS: current_position.e = to; break;
+    default: break;
   }
   tor_move_to_current_position();
 }
@@ -548,6 +549,10 @@ void tor_set_position(float x, float y, float z, float e) {
   current_position.set(x, y, z, e);
   sync_plan_position();
   report_current_position();
+}
+
+void tor_set_position(const float (&pos)[4]) {  
+  tor_set_position(pos[0], pos[1], pos[2], pos[3]);
 }
 
 void tor_set_position(float pos) {  
@@ -607,21 +612,32 @@ void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold) {
  * G28_TOR: Home to Z anchor point*
  */
 void GcodeSuite::G28_TOR() {
+  SERIAL_ECHOLN("######## G28_TOR version 1.4 ########");
   
   float hp = 1.5 * X_BED_SIZE;
   float tightenPosition = 0;
-  float releasePosition = 2;
+  float releasePositionOffset = 2;
   
-  const int16_t defaultPrimaryThreshold = 115;
-  const int16_t primaryThreshold = parser.seen('P') ? (parser.has_value() ? parser.value_int() : defaultPrimaryThreshold) : defaultPrimaryThreshold;
-  const int16_t defaultSecondaryThreshold = 70;
-  const int16_t secondaryThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultSecondaryThreshold) : defaultSecondaryThreshold;
-  const AxisEnum anchor_axis = (AxisEnum)(parser.seen('A') ? (parser.has_value() ? parser.value_int() : X_AXIS) : X_AXIS);
-  const AxisEnum tighten_axis = (AxisEnum)(parser.seen('T') ? (parser.has_value() ? parser.value_int() : NO_AXIS) : NO_AXIS);
-  const uint8_t mode = parser.seen('N') ? (parser.has_value() ? parser.value_int() : 0) : 0;
+  //N: Homing modes
   //0: first tighten all cords, then move to anchor (default X) while pulling on other cords
   //1: first go to center, then move to anchor (default X) while pulling on other cords. do this only when position is nearly known!
   //2: only tighten cords
+  //3: only anchor move  
+  const uint8_t mode = parser.seen('N') ? (parser.has_value() ? parser.value_int() : 0) : 0;
+  
+  //P: stallguard threshold for tighten moves
+  const int16_t defaultTightenThreshold = 115;
+  const int16_t tightenThreshold = parser.seen('P') ? (parser.has_value() ? parser.value_int() : defaultTightenThreshold) : defaultTightenThreshold;
+
+  //S: stallguard threshold for anchor moves
+  const int16_t defaultAnchorThreshold = 70;
+  const int16_t anchorThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultAnchorThreshold) : defaultAnchorThreshold;
+  
+  //A: anchor axis (0, 1, 2, 3), if missing X_AXIS is tightened
+  const AxisEnum anchor_axis = (AxisEnum)(parser.seen('A') ? (parser.has_value() ? parser.value_int() : X_AXIS) : X_AXIS);
+
+  //A: anchor axis (0, 1, 2, 3), if missing all axis are tightened
+  const AxisEnum tighten_axis = (AxisEnum)(parser.seen('T') ? (parser.has_value() ? parser.value_int() : ALL_AXES) : ALL_AXES);
 
   // Wait for planner moves to finish!
   planner.synchronize();
@@ -636,24 +652,20 @@ void GcodeSuite::G28_TOR() {
   //tighten all or specified axis
   if (mode == 0 || mode == 2) {  
     report_current_position();
-    if (tighten_axis > 0) {
-      tor_set_position(hp);
-      move_with_stallGuard(tighten_axis, tightenPosition, primaryThreshold);
+    if (tighten_axis == ALL_AXES) {
+      LOOP_XYZE(i) {
+        tor_set_position(hp);
+        move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
+      }
     }
     else {
       tor_set_position(hp);
-      move_with_stallGuard(X_AXIS, tightenPosition, primaryThreshold);
-      tor_set_position(hp);
-      move_with_stallGuard(Y_AXIS, tightenPosition, primaryThreshold);
-      tor_set_position(hp);
-      move_with_stallGuard(Z_AXIS, tightenPosition, primaryThreshold);
-      tor_set_position(hp);
-      move_with_stallGuard(E_AXIS, tightenPosition, primaryThreshold);
+      move_with_stallGuard(tighten_axis, tightenPosition, tightenThreshold);
     }
   }
   
   //move to anchor and pull on other cords
-  if (mode == 0 || mode == 1) {
+  if (mode == 0 || mode == 1 || mode == 3) {
     if (anchor_axis != X_AXIS) DISABLE_AXIS_X();
     if (anchor_axis != Y_AXIS) DISABLE_AXIS_Y();
     if (anchor_axis != Z_AXIS) DISABLE_AXIS_Z();
@@ -661,7 +673,7 @@ void GcodeSuite::G28_TOR() {
 
     report_current_position();
     tor_set_position(hp);
-    move_with_stallGuard(anchor_axis, tightenPosition, secondaryThreshold);
+    move_with_stallGuard(anchor_axis, tightenPosition, anchorThreshold);
     
     if (anchor_axis != X_AXIS) ENABLE_AXIS_X();
     if (anchor_axis != Y_AXIS) ENABLE_AXIS_Y();
@@ -669,15 +681,21 @@ void GcodeSuite::G28_TOR() {
     if (anchor_axis != E_AXIS) ENABLE_AXIS_E0();
     
     //release anchor axis slightly
-    report_current_position();
-    tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
-    tor_move_axis(anchor_axis, releasePosition);
+    tor_set_position(0);
+    tor_move_axis(anchor_axis, releasePositionOffset);
     
     //tighten other axis
     LOOP_XYZE(i) {
-      if (anchor_axis != (AxisEnum)i) move_with_stallGuard((AxisEnum)i, tightenPosition, primaryThreshold);
+      tor_set_position(hp);
+      if (anchor_axis != (AxisEnum)i) move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
+    }
+    
+    switch (anchor_axis) {
+      case X_AXIS: tor_set_position(ANCHOR_X_POS); break;
+      case Y_AXIS: tor_set_position(ANCHOR_Y_POS); break;
+      case Z_AXIS: tor_set_position(ANCHOR_Z_POS); break;
+      case E_AXIS: tor_set_position(ANCHOR_E0_POS); break;
+      default: break;
     }
   }
-
-  tor_set_position(MANUAL_X_HOME_POS, MANUAL_Y_HOME_POS, MANUAL_Z_HOME_POS, MANUAL_E0_HOME_POS);
 }
