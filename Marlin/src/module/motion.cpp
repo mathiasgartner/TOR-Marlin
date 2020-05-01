@@ -1006,7 +1006,7 @@ bool line_to_destination_tor_segmented() {
     
   SERIAL_ECHOPAIR("# do a segmented move with ", segments, " segments");
   SERIAL_ECHOLN();
-  //*
+  /*
   SERIAL_ECHO("## cartStart: ");
   report_logical_position(cartStart);
   SERIAL_ECHOLN();
@@ -1033,13 +1033,7 @@ bool line_to_destination_tor_segmented() {
   while (--segments) {
     segment_idle(next_idle_ms);
     cartRaw += segment_distance;
-    raw = cartesian_to_cords(cartRaw);    
-    SERIAL_ECHO("### cartesian: ");
-    report_logical_position(cartRaw);
-    SERIAL_ECHOLN();
-    SERIAL_ECHO("### cords    : ");
-    report_logical_position(raw);
-    SERIAL_ECHOLN();
+    raw = cartesian_to_cords(cartRaw);
     if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
       #if ENABLED(SCARA_FEEDRATE_SCALING)
         , inv_duration

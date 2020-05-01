@@ -1628,7 +1628,7 @@
 //
 // G1 segmented move
 //
-#define MM_PER_LINEAR_SEGMENT 5.0
+#define MM_PER_LINEAR_SEGMENT 3.0
 
 //
 // G2/G3 Arc Support
