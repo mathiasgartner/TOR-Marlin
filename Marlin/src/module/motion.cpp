@@ -964,12 +964,14 @@ xyz_float_t cords_to_cartesian(xyze_float_t cords) {
   xyze_float_t c2 = cords * cords;
   cartesian.x = (TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + c2.x - c2.y) / (2.0 * TOR_ANCHOR_X_Y);
   cartesian.y = (TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + c2.x - c2.e) / (2.0 * TOR_ANCHOR_X_E0);
-  cartesian.z = SQRT(c2.x - cartesian.x * cartesian.x - cartesian.y * cartesian.y);
+  float zExact = c2.x - cartesian.x * cartesian.x - cartesian.y * cartesian.y;
+  NOLESS(zExact, 0.0f);
+  cartesian.z = SQRT(zExact);
   return cartesian;
 }
 
 //calculate cord lengths from cartesian coordinates
-xyz_float_t cartesian_to_cords(xyz_float_t cartesian) {
+xyze_float_t cartesian_to_cords(xyz_float_t cartesian) {
   xyze_float_t cords;
   xyz_float_t boxSize = {TOR_ANCHOR_X_Y, TOR_ANCHOR_X_E0, TOR_HEIGHT};
   xyz_float_t diffs = boxSize - cartesian;
@@ -984,17 +986,17 @@ xyz_float_t cartesian_to_cords(xyz_float_t cartesian) {
 
 //TOR: do a segmented move 
 //adapted from line_to_destination_kinematic()
-inline bool line_to_destination_tor_segmented() {  
+bool line_to_destination_tor_segmented() {  
   // Get the top feedrate of the move in the XY plane
   const float scaled_fr_mm_s = MMS_SCALED(feedrate_mm_s);
   
   xyz_float_t cartStart = cords_to_cartesian(current_position);
   xyz_float_t cartEnd = cords_to_cartesian(destination);
   xyz_float_t cartDiff = cartEnd - cartStart;
-
+  
   float cartesian_mm = cartDiff.magnitude();
   
-  float segmentLength = 5.0;
+  float segmentLength = MM_PER_LINEAR_SEGMENT;
   uint16_t segments = cartesian_mm / segmentLength;
   NOLESS(segments, 1U);
   
@@ -1002,17 +1004,43 @@ inline bool line_to_destination_tor_segmented() {
               cartesian_segment_mm = cartesian_mm * inv_segments;
   const xyz_float_t segment_distance = cartDiff * inv_segments;
     
-  SERIAL_ECHOPAIR("### do a segmented move with ", segments, " segments");
+  SERIAL_ECHOPAIR("# do a segmented move with ", segments, " segments");
+  SERIAL_ECHOLN();
+  //*
+  SERIAL_ECHO("## cartStart: ");
+  report_logical_position(cartStart);
+  SERIAL_ECHOLN();
+  SERIAL_ECHO("## cartEnd: ");
+  report_logical_position(cartEnd);
+  SERIAL_ECHOLN();
+  SERIAL_ECHO("## cartDiff: ");
+  report_logical_position(cartDiff);
+  SERIAL_ECHOLN();
+  SERIAL_ECHOLNPAIR("## cartesian_mm: ", cartesian_mm);
+  SERIAL_ECHOLNPAIR("## segments: ", segments);
+  SERIAL_ECHOLNPAIR("## cartesian_segment_mm: ", cartesian_segment_mm);
+  SERIAL_ECHO("## segment_distance: ");
+  report_logical_position(segment_distance);
+  SERIAL_ECHOLN();
+  //*/
 
   // Get the current position as starting point
   xyz_pos_t cartRaw = cartStart;
+  xyze_pos_t raw;
 
   // Calculate and execute the segments
   millis_t next_idle_ms = millis() + 200UL;
   while (--segments) {
     segment_idle(next_idle_ms);
     cartRaw += segment_distance;
-    if (!planner.buffer_line(cartesian_to_cords(cartRaw), scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+    raw = cartesian_to_cords(cartRaw);    
+    SERIAL_ECHO("### cartesian: ");
+    report_logical_position(cartRaw);
+    SERIAL_ECHOLN();
+    SERIAL_ECHO("### cords    : ");
+    report_logical_position(raw);
+    SERIAL_ECHOLN();
+    if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
       #if ENABLED(SCARA_FEEDRATE_SCALING)
         , inv_duration
       #endif
