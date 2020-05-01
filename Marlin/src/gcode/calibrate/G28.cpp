@@ -609,7 +609,7 @@ void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold) {
 }
 
 /**
- * G28_TOR: Home to Z anchor point*
+ * G28_TOR: Home TOR setup to specified anchor point
  */
 void GcodeSuite::G28_TOR() {
   SERIAL_ECHOLN("######## G28_TOR version 1.4 ########");
@@ -622,7 +622,7 @@ void GcodeSuite::G28_TOR() {
   //0: first tighten all cords, then move to anchor (default X) while pulling on other cords
   //1: first go to center, then move to anchor (default X) while pulling on other cords. do this only when position is nearly known!
   //2: only tighten cords
-  //3: only anchor move  
+  //3: only anchor axis  
   const uint8_t mode = parser.seen('N') ? (parser.has_value() ? parser.value_int() : 0) : 0;
   
   //P: stallguard threshold for tighten moves

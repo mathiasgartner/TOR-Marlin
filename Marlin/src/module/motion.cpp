@@ -221,7 +221,16 @@ inline void report_more_positions() {
 // Report the logical position for a given machine position
 inline void report_logical_position(const xyze_pos_t &rpos) {
   const xyze_pos_t lpos = rpos.asLogical();
-  SERIAL_ECHOPAIR_P(X_LBL, lpos.x, SP_Y_LBL, lpos.y, SP_Z_LBL, lpos.z, SP_E_LBL, lpos.e);
+  //SERIAL_ECHOPAIR_P(X_LBL, lpos.x, SP_Y_LBL, lpos.y, SP_Z_LBL, lpos.z, SP_E_LBL, lpos.e);
+  //print with 4 decimal digits
+  SERIAL_ECHO(X_LBL);
+  SERIAL_ECHO_F(lpos.x, 4);
+  SERIAL_ECHO(SP_Y_LBL);
+  SERIAL_ECHO_F(lpos.y, 4);
+  SERIAL_ECHO(SP_Z_LBL);
+  SERIAL_ECHO_F(lpos.z, 4);
+  SERIAL_ECHO(SP_E_LBL);
+  SERIAL_ECHO_F(lpos.e, 4);
 }
 
 // Report the real current position according to the steppers.
@@ -949,78 +958,61 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
 #endif // !IS_KINEMATIC
 #endif // !UBL_SEGMENTED
 
+//calculate cartesian coordinates from three cord lengths (x, y and e length)
+xyz_float_t cords_to_cartesian(xyze_float_t cords) {
+  xyz_float_t cartesian;
+  xyze_float_t c2 = cords * cords;
+  cartesian.x = (TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + c2.x - c2.y) / (2.0 * TOR_ANCHOR_X_Y);
+  cartesian.y = (TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + c2.x - c2.e) / (2.0 * TOR_ANCHOR_X_E0);
+  cartesian.z = SQRT(c2.x - cartesian.x * cartesian.x - cartesian.y * cartesian.y);
+  return cartesian;
+}
+
+//calculate cord lengths from cartesian coordinates
+xyz_float_t cartesian_to_cords(xyz_float_t cartesian) {
+  xyze_float_t cords;
+  xyz_float_t boxSize = {TOR_ANCHOR_X_Y, TOR_ANCHOR_X_E0, TOR_HEIGHT};
+  xyz_float_t diffs = boxSize - cartesian;
+  xyz_float_t c2 = cartesian * cartesian;
+  xyz_float_t d2 = diffs * diffs;
+  cords.x = SQRT(c2.x + c2.y + c2.z);
+  cords.y = SQRT(d2.x + c2.y + c2.z);
+  cords.z = SQRT(d2.x + d2.y + c2.z);
+  cords.e = SQRT(c2.x + d2.y + c2.z);
+  return cords;
+}
+
 //TOR: do a segmented move 
 //adapted from line_to_destination_kinematic()
-inline bool line_to_destination_tor_segmented() {
-
+inline bool line_to_destination_tor_segmented() {  
   // Get the top feedrate of the move in the XY plane
   const float scaled_fr_mm_s = MMS_SCALED(feedrate_mm_s);
+  
+  xyz_float_t cartStart = cords_to_cartesian(current_position);
+  xyz_float_t cartEnd = cords_to_cartesian(destination);
+  xyz_float_t cartDiff = cartEnd - cartStart;
 
-  const xyze_float_t diff = destination - current_position;
-
-  // If the move is only in Z/E don't split up the move
-  //if (!diff.x && !diff.y) {
-  //  planner.buffer_line(destination, scaled_fr_mm_s, active_extruder);
-  //  return false; // caller will update current_position
-  //}
-
-  // Fail if attempting move outside printable radius
-  //if (!position_is_reachable(destination)) return true;
-
-  // Get the linear distance in XYZE
-  float cartesian_mm = diff.magnitude();
-
-  // If the move is very short, check the E move distance
-  //if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e);
-
-  // No E move either? Game over.
-  //if (UNEAR_ZERO(cartesian_mm)) return true;
-
-  // Minimum number of seconds to move the given distance
-  //const float seconds = cartesian_mm / scaled_fr_mm_s;
-
-  // The number of segments-per-second times the duration
-  // gives the number of segments
-  //uint16_t segments = delta_segments_per_second * seconds;
-
-  // Every segment is 1 mm
-  uint16_t segments = cartesian_mm;
-
-  // For SCARA enforce a minimum segment size
-  //#if IS_SCARA
-  //  NOMORE(segments, cartesian_mm * RECIPROCAL(SCARA_MIN_SEGMENT_LENGTH));
-  //#endif
-
-  // At least one segment is required
+  float cartesian_mm = cartDiff.magnitude();
+  
+  float segmentLength = 5.0;
+  uint16_t segments = cartesian_mm / segmentLength;
   NOLESS(segments, 1U);
-
-  // The approximate length of each segment
+  
   const float inv_segments = 1.0f / float(segments),
               cartesian_segment_mm = cartesian_mm * inv_segments;
-  const xyze_float_t segment_distance = diff * inv_segments;
-
-  //#if ENABLED(SCARA_FEEDRATE_SCALING)
-  //  const float inv_duration = scaled_fr_mm_s / cartesian_segment_mm;
-  //#endif
-
+  const xyz_float_t segment_distance = cartDiff * inv_segments;
+    
   SERIAL_ECHOPAIR("### do a segmented move with ", segments, " segments");
-  /*
-  SERIAL_ECHOPAIR("mm=", cartesian_mm);
-  SERIAL_ECHOPAIR(" seconds=", seconds);
-  SERIAL_ECHOPAIR(" segments=", segments);
-  SERIAL_ECHOPAIR(" segment_mm=", cartesian_segment_mm);
-  SERIAL_EOL();
-  //*/
 
   // Get the current position as starting point
-  xyze_pos_t raw = current_position;
+  xyz_pos_t cartRaw = cartStart;
 
   // Calculate and execute the segments
   millis_t next_idle_ms = millis() + 200UL;
   while (--segments) {
     segment_idle(next_idle_ms);
-    raw += segment_distance;
-    if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+    cartRaw += segment_distance;
+    if (!planner.buffer_line(cartesian_to_cords(cartRaw), scaled_fr_mm_s, active_extruder, cartesian_segment_mm
       #if ENABLED(SCARA_FEEDRATE_SCALING)
         , inv_duration
       #endif
