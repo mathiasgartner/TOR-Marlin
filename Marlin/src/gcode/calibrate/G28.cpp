@@ -612,11 +612,12 @@ void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold) {
  * G28_TOR: Home TOR setup to specified anchor point
  */
 void GcodeSuite::G28_TOR() {
-  SERIAL_ECHOLN("######## G28_TOR version 1.4 ########");
+  SERIAL_ECHOLN("######## G28_TOR version 1.5 ########");
   
   float hp = 1.5 * X_BED_SIZE;
   float tightenPosition = 0;
   float releasePositionOffset = 2;
+  float releaseAnchorBeforeHomingPosition = 20;
   
   //N: Homing modes
   //0: first tighten all cords, then move to anchor (default X) while pulling on other cords
@@ -636,7 +637,7 @@ void GcodeSuite::G28_TOR() {
   //A: anchor axis (0, 1, 2, 3), if missing X_AXIS is tightened
   const AxisEnum anchor_axis = (AxisEnum)(parser.seen('A') ? (parser.has_value() ? parser.value_int() : X_AXIS) : X_AXIS);
 
-  //A: anchor axis (0, 1, 2, 3), if missing all axis are tightened
+  //A: tighten axis (0, 1, 2, 3), if missing all axis are tightened
   const AxisEnum tighten_axis = (AxisEnum)(parser.seen('T') ? (parser.has_value() ? parser.value_int() : ALL_AXES) : ALL_AXES);
 
   // Wait for planner moves to finish!
@@ -655,23 +656,27 @@ void GcodeSuite::G28_TOR() {
     if (tighten_axis == ALL_AXES) {
       LOOP_XYZE(i) {
         tor_set_position(hp);
-        move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
+        move_with_stallGuard((AxisEnum)i, tightenPosition, defaultTightenThreshold);
       }
     }
     else {
       tor_set_position(hp);
-      move_with_stallGuard(tighten_axis, tightenPosition, tightenThreshold);
+      move_with_stallGuard(tighten_axis, tightenPosition, defaultTightenThreshold);
     }
   }
   
   //move to anchor and pull on other cords
   if (mode == 0 || mode == 1 || mode == 3) {
+    report_current_position();
+    
     if (anchor_axis != X_AXIS) DISABLE_AXIS_X();
     if (anchor_axis != Y_AXIS) DISABLE_AXIS_Y();
     if (anchor_axis != Z_AXIS) DISABLE_AXIS_Z();
     if (anchor_axis != E_AXIS) DISABLE_AXIS_E0();
 
-    report_current_position();
+    tor_set_position(hp);
+    tor_move_axis(anchor_axis, hp + releaseAnchorBeforeHomingPosition);
+
     tor_set_position(hp);
     move_with_stallGuard(anchor_axis, tightenPosition, anchorThreshold);
     
