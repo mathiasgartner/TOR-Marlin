@@ -627,11 +627,11 @@ void GcodeSuite::G28_TOR() {
   const uint8_t mode = parser.seen('N') ? (parser.has_value() ? parser.value_int() : 0) : 0;
   
   //P: stallguard threshold for tighten moves
-  const int16_t defaultTightenThreshold = 115;
+  const int16_t defaultTightenThreshold = 140;
   const int16_t tightenThreshold = parser.seen('P') ? (parser.has_value() ? parser.value_int() : defaultTightenThreshold) : defaultTightenThreshold;
 
   //S: stallguard threshold for anchor moves
-  const int16_t defaultAnchorThreshold = 70;
+  const int16_t defaultAnchorThreshold = 90;
   const int16_t anchorThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultAnchorThreshold) : defaultAnchorThreshold;
   
   //A: anchor axis (0, 1, 2, 3), if missing X_AXIS is tightened

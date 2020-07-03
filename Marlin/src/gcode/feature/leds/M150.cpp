@@ -45,6 +45,16 @@
  *   M150 P          ; Set LED full brightness
  */
 void GcodeSuite::M150() {  
+
+  /*leds.set_color(MakeLEDColor(
+    parser.seen('R') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('U') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('B') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('W') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('P') ? (parser.has_value() ? parser.value_byte() : 255) : neo.brightness()
+  ));
+  return;*/
+
   //neo.init();
   //return;
   
@@ -85,7 +95,14 @@ void GcodeSuite::M150() {
     }
   }
   else {
-    leds.set_color(color);
+    if (color == LEDColorOff()) {
+      SERIAL_ECHOPGM("clearing LED strip...");
+      SERIAL_EOL();
+      neo.clear();
+    }
+    else {
+      leds.set_color(color);
+    }
   }
 }
 

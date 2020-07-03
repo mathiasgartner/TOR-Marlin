@@ -1098,8 +1098,8 @@
 // @section machine
 
 //TOR dimensions
-#define TOR_ANCHOR_X_Y  252.0
-#define TOR_ANCHOR_X_E0  TOR_ANCHOR_X_Y
+#define TOR_ANCHOR_X_Y  244.0
+#define TOR_ANCHOR_X_E0  241.0 //TOR_ANCHOR_X_Y
 #define TOR_HEIGHT      210.0 //verify this value
 #define TOR_DIAGONAL_2D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0)
 #define TOR_DIAGONAL_3D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + TOR_HEIGHT * TOR_HEIGHT)
@@ -2221,15 +2221,15 @@
 #endif
 
 // Support for Adafruit Neopixel LED driver
-//#define NEOPIXEL_LED
+#define NEOPIXEL_LED
 #if ENABLED(NEOPIXEL_LED)
-  #define NEOPIXEL_TYPE   NEO_GRB// + NEO_KHZ800 // NEO_GRBW / NEO_GRB - four/three channel driver type (defined in Adafruit_NeoPixel.h)
+  #define NEOPIXEL_TYPE   (NEO_GRB + NEO_KHZ800) // NEO_GRBW / NEO_GRB - four/three channel driver type (defined in Adafruit_NeoPixel.h)
   //#define NEOPIXEL_PIN    PA1       // LED driving pin
   //#define NEOPIXEL2_TYPE NEOPIXEL_TYPE
   //#define NEOPIXEL2_PIN    5
-  #define NEOPIXEL_PIXELS 10       // Number of LEDs in the strip, larger of 2 strips if 2 neopixel strips are used
+  #define NEOPIXEL_PIXELS 8       // Number of LEDs in the strip, larger of 2 strips if 2 neopixel strips are used
   #define NEOPIXEL_IS_SEQUENTIAL   // Sequential display for temperature change - LED by LED. Disable to change all LEDs at once.
-  #define NEOPIXEL_BRIGHTNESS 127  // Initial brightness (0-255)
+  #define NEOPIXEL_BRIGHTNESS 255  // Initial brightness (0-255)
   #define NEOPIXEL_STARTUP_TEST  // Cycle through colors at startup
 
   // Use a single Neopixel LED for static (background) lighting
