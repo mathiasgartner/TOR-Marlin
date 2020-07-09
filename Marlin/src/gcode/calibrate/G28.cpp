@@ -608,10 +608,20 @@ void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold) {
   move_with_stallGuard(x, y, z, e, threshold);
 }
 
+void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold, float otherPositionDiag, float otherPositionOffDiag) {
+  float x, y, z, e;
+  x = axis == X_AXIS ? position : (axis == Z_AXIS ? otherPositionDiag : otherPositionOffDiag);
+  y = axis == Y_AXIS ? position : (axis == E_AXIS ? otherPositionDiag : otherPositionOffDiag);
+  z = axis == Z_AXIS ? position : (axis == X_AXIS ? otherPositionDiag : otherPositionOffDiag);
+  e = axis == E_AXIS ? position : (axis == Y_AXIS ? otherPositionDiag : otherPositionOffDiag);
+  move_with_stallGuard(x, y, z, e, threshold);
+}
+
 /**
  * G28_TOR: Home TOR setup to specified anchor point
  */
 void GcodeSuite::G28_TOR() {
+  //G28 S50 P140 F68 R8 D1.05 B1.15
   SERIAL_ECHOLN("######## G28_TOR version 1.5 ########");
   
   float hp = 1.5 * X_BED_SIZE;
@@ -644,6 +654,15 @@ void GcodeSuite::G28_TOR() {
 
   //T: tighten axis (0, 1, 2, 3), if missing all axis are tightened
   const AxisEnum tighten_axis = (AxisEnum)(parser.seen('T') ? (parser.has_value() ? parser.value_int() : ALL_AXES) : ALL_AXES);
+
+  //R: repeat extra homing steps R time
+  const int repeatExtraSteps = parser.seen('R') ? (parser.has_value() ? parser.value_int() : 1) : 1;
+
+  //D: ratio between anchor axis steps and diagonal axis steps in extra homing steps
+  const float extraStepRatio = parser.seen('D') ? (parser.has_value() ? parser.value_float() : 1.1) : 1.1;
+
+  //B: ratio between anchor axis steps and diagonal axis steps in extra homing steps when moving back
+  const float extraStepRatioBack = parser.seen('B') ? (parser.has_value() ? parser.value_float() : 1.2) : 1.2;
 
   // Wait for planner moves to finish!
   planner.synchronize();
@@ -686,11 +705,11 @@ void GcodeSuite::G28_TOR() {
     move_with_stallGuard(anchor_axis, tightenPosition, anchorThreshold);
     
     //release anchor axis and tighten again with final threshold
-    tor_set_position(0);
-    tor_move_axis(anchor_axis, releasePositionBeforeFinal);
-    safe_delay(500);
-    tor_set_position(hp);
-    move_with_stallGuard(anchor_axis, tightenPosition, finalThreshold);
+    //tor_set_position(0);
+    //tor_move_axis(anchor_axis, releasePositionBeforeFinal);
+    //safe_delay(500);
+    //tor_set_position(hp);
+    //move_with_stallGuard(anchor_axis, tightenPosition, finalThreshold);
     
     if (anchor_axis != X_AXIS) ENABLE_AXIS_X();
     if (anchor_axis != Y_AXIS) ENABLE_AXIS_Y();
@@ -706,7 +725,34 @@ void GcodeSuite::G28_TOR() {
       tor_set_position(hp);
       if (anchor_axis != (AxisEnum)i) move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
     }
+
+    int sleepTime = 50;
+    for (int i = 0; i < repeatExtraSteps; i++) {
+      SERIAL_ECHOLNPAIR("############### 1.8");  
+      SERIAL_ECHOLNPAIR("############### do extra homing step");  
+      planner.synchronize();
+      safe_delay(sleepTime);
+      tor_set_position(0);
+      float pos = 20;
+      tor_move_to(pos * extraStepRatio, 10, -pos, 10);
+      safe_delay(sleepTime);
+      tor_set_position(0);      
+      tor_move_to(0, 0, 0.5, 0);  
+      safe_delay(sleepTime);    
+      tor_set_position(0);
+      move_with_stallGuard(anchor_axis, pos * (-extraStepRatioBack), finalThreshold, pos * extraStepRatioBack, 0);    
+      safe_delay(sleepTime);
+      //tighten other axis
+      LOOP_XYZE(i) {
+        tor_set_position(hp);
+        if (anchor_axis != (AxisEnum)i) move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
+      }
+    }
     
+    //release anchor axis slightly
+    tor_set_position(0);
+    tor_move_axis(anchor_axis, 1);
+
     switch (anchor_axis) {
       case X_AXIS: tor_set_position(ANCHOR_X_POS); break;
       case Y_AXIS: tor_set_position(ANCHOR_Y_POS); break;
