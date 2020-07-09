@@ -221,7 +221,16 @@ inline void report_more_positions() {
 // Report the logical position for a given machine position
 inline void report_logical_position(const xyze_pos_t &rpos) {
   const xyze_pos_t lpos = rpos.asLogical();
-  SERIAL_ECHOPAIR_P(X_LBL, lpos.x, SP_Y_LBL, lpos.y, SP_Z_LBL, lpos.z, SP_E_LBL, lpos.e);
+  //SERIAL_ECHOPAIR_P(X_LBL, lpos.x, SP_Y_LBL, lpos.y, SP_Z_LBL, lpos.z, SP_E_LBL, lpos.e);
+  //print with 4 decimal digits
+  SERIAL_ECHO(X_LBL);
+  SERIAL_ECHO_F(lpos.x, 4);
+  SERIAL_ECHO(SP_Y_LBL);
+  SERIAL_ECHO_F(lpos.y, 4);
+  SERIAL_ECHO(SP_Z_LBL);
+  SERIAL_ECHO_F(lpos.z, 4);
+  SERIAL_ECHO(SP_E_LBL);
+  SERIAL_ECHO_F(lpos.e, 4);
 }
 
 // Report the real current position according to the steppers.
@@ -949,6 +958,100 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
 #endif // !IS_KINEMATIC
 #endif // !UBL_SEGMENTED
 
+//calculate cartesian coordinates from three cord lengths (x, y and e length)
+xyz_float_t cords_to_cartesian(xyze_float_t cords) {
+  xyz_float_t cartesian;
+  xyze_float_t c2 = cords * cords;
+  cartesian.x = (TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + c2.x - c2.y) / (2.0 * TOR_ANCHOR_X_Y);
+  cartesian.y = (TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + c2.x - c2.e) / (2.0 * TOR_ANCHOR_X_E0);
+  float zExact = c2.x - cartesian.x * cartesian.x - cartesian.y * cartesian.y;
+  NOLESS(zExact, 0.0f);
+  cartesian.z = SQRT(zExact);
+  return cartesian;
+}
+
+//calculate cord lengths from cartesian coordinates
+xyze_float_t cartesian_to_cords(xyz_float_t cartesian) {
+  xyze_float_t cords;
+  xyz_float_t boxSize = {TOR_ANCHOR_X_Y, TOR_ANCHOR_X_E0, TOR_HEIGHT};
+  xyz_float_t diffs = boxSize - cartesian;
+  xyz_float_t c2 = cartesian * cartesian;
+  xyz_float_t d2 = diffs * diffs;
+  cords.x = SQRT(c2.x + c2.y + c2.z);
+  cords.y = SQRT(d2.x + c2.y + c2.z);
+  cords.z = SQRT(d2.x + d2.y + c2.z);
+  cords.e = SQRT(c2.x + d2.y + c2.z);
+  return cords;
+}
+
+//TOR: do a segmented move 
+//adapted from line_to_destination_kinematic()
+bool line_to_destination_tor_segmented() {  
+  // Get the top feedrate of the move in the XY plane
+  const float scaled_fr_mm_s = MMS_SCALED(feedrate_mm_s);
+  
+  xyz_float_t cartStart = cords_to_cartesian(current_position);
+  xyz_float_t cartEnd = cords_to_cartesian(destination);
+  xyz_float_t cartDiff = cartEnd - cartStart;
+  
+  float cartesian_mm = cartDiff.magnitude();
+  
+  float segmentLength = MM_PER_LINEAR_SEGMENT;
+  uint16_t segments = cartesian_mm / segmentLength;
+  NOLESS(segments, 1U);
+  
+  const float inv_segments = 1.0f / float(segments),
+              cartesian_segment_mm = cartesian_mm * inv_segments;
+  const xyz_float_t segment_distance = cartDiff * inv_segments;
+    
+  SERIAL_ECHOPAIR("# do a segmented move with ", segments, " segments");
+  SERIAL_ECHOLN();
+  /*
+  SERIAL_ECHO("## cartStart: ");
+  report_logical_position(cartStart);
+  SERIAL_ECHOLN();
+  SERIAL_ECHO("## cartEnd: ");
+  report_logical_position(cartEnd);
+  SERIAL_ECHOLN();
+  SERIAL_ECHO("## cartDiff: ");
+  report_logical_position(cartDiff);
+  SERIAL_ECHOLN();
+  SERIAL_ECHOLNPAIR("## cartesian_mm: ", cartesian_mm);
+  SERIAL_ECHOLNPAIR("## segments: ", segments);
+  SERIAL_ECHOLNPAIR("## cartesian_segment_mm: ", cartesian_segment_mm);
+  SERIAL_ECHO("## segment_distance: ");
+  report_logical_position(segment_distance);
+  SERIAL_ECHOLN();
+  //*/
+
+  // Get the current position as starting point
+  xyz_pos_t cartRaw = cartStart;
+  xyze_pos_t raw;
+
+  // Calculate and execute the segments
+  millis_t next_idle_ms = millis() + 200UL;
+  while (--segments) {
+    segment_idle(next_idle_ms);
+    cartRaw += segment_distance;
+    raw = cartesian_to_cords(cartRaw);
+    if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+      #if ENABLED(SCARA_FEEDRATE_SCALING)
+        , inv_duration
+      #endif
+    ))
+      break;
+  }
+
+  // Ensure last segment arrives at target location.
+  planner.buffer_line(destination, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+    #if ENABLED(SCARA_FEEDRATE_SCALING)
+      , inv_duration
+    #endif
+  );
+
+  return false; // caller will update current_position
+}
+
 #if HAS_DUPLICATION_MODE
   bool extruder_duplication_enabled,
        mirrored_duplication_mode;
@@ -1113,7 +1216,9 @@ void prepare_line_to_destination() {
     #elif IS_KINEMATIC
       line_to_destination_kinematic()
     #else
-      line_to_destination_cartesian()
+      (parser.seen('S') && line_to_destination_tor_segmented()) 
+      ||
+      (line_to_destination_cartesian())
     #endif
   ) return;
 

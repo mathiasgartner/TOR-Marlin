@@ -1211,6 +1211,9 @@
   #if ENABLED(USE_ZMIN_PLUG)
     #define ENDSTOPPULLUP_ZMIN
   #endif
+  #if ENABLED(USE_E0MIN_PLUG)
+    #define ENDSTOPPULLUP_E0MIN
+  #endif
 #endif
 
 /**
@@ -1398,6 +1401,8 @@
 #define HAS_Y_MAX _HAS_STOP(Y,MAX)
 #define HAS_Z_MIN _HAS_STOP(Z,MIN)
 #define HAS_Z_MAX _HAS_STOP(Z,MAX)
+#define HAS_E0_MIN _HAS_STOP(E0,MIN)
+#define HAS_E0_MAX _HAS_STOP(E0,MAX)
 #define HAS_X2_MIN (PIN_EXISTS(X2_MIN))
 #define HAS_X2_MAX (PIN_EXISTS(X2_MAX))
 #define HAS_Y2_MIN (PIN_EXISTS(Y2_MIN))

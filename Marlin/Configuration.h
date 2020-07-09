@@ -104,14 +104,14 @@
  *
  * :[-1, 0, 1, 2, 3, 4, 5, 6, 7]
  */
-#define SERIAL_PORT -1
+#define SERIAL_PORT 2
 
 /**
  * Select a secondary serial port on the board to use for communication with the host.
  *
  * :[-1, 0, 1, 2, 3, 4, 5, 6, 7]
  */
-#define SERIAL_PORT_2 0
+#define SERIAL_PORT_2 -1
 
 /**
  * This setting determines the communication speed of the printer.
@@ -129,7 +129,7 @@
 
 // Choose the name from boards.h that matches your setup
 #ifndef MOTHERBOARD
-  #define MOTHERBOARD BOARD_BTT_SKR_V1_3
+  #define MOTHERBOARD BOARD_BTT_SKR_MINI_E3_V1_2
 #endif
 
 // Name displayed in the LCD "Ready" message and Info menu
@@ -616,9 +616,11 @@
 #define USE_XMIN_PLUG
 #define USE_YMIN_PLUG
 #define USE_ZMIN_PLUG
+#define USE_E0MIN_PLUG
 //#define USE_XMAX_PLUG
 //#define USE_YMAX_PLUG
 //#define USE_ZMAX_PLUG
+//#define USE_E0MAX_PLUG
 
 // Enable pullup for all endstops to prevent a floating state
 #define ENDSTOPPULLUPS
@@ -650,9 +652,11 @@
 #define X_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
 #define Y_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
 #define Z_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
+#define E0_MIN_ENDSTOP_INVERTING false  // Set to true to invert the logic of the endstop.
 #define X_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
 #define Y_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
 #define Z_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
+#define E0_MAX_ENDSTOP_INVERTING false // Set to true to invert the logic of the endstop.
 #define Z_MIN_PROBE_ENDSTOP_INVERTING false // Set to true to invert the logic of the probe.
 
 /**
@@ -690,7 +694,7 @@
 
 // Enable this feature if all enabled endstop pins are interrupt-capable.
 // This will remove the need to poll the interrupt pins, saving many CPU cycles.
-//#define ENDSTOP_INTERRUPTS_FEATURE
+#define ENDSTOP_INTERRUPTS_FEATURE
 
 /**
  * Endstop Noise Threshold
@@ -731,7 +735,7 @@
  * Override with M92
  *                                      X, Y, Z, E0 [, E1[, E2...]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT    { 56.5884, 56.5884, 56.5884, 56.5884 }
+#define DEFAULT_AXIS_STEPS_PER_UNIT    { 72.7565, 72.7565, 72.7565, 72.7565 }
 
 /**
  * Default Max Feed Rate (mm/s)
@@ -1089,12 +1093,13 @@
 #define X_HOME_DIR -1
 #define Y_HOME_DIR -1
 #define Z_HOME_DIR -1
+#define E0_HOME_DIR -1
 
 // @section machine
 
 //TOR dimensions
-#define TOR_ANCHOR_X_Y  246.0
-#define TOR_ANCHOR_X_E0  246.0
+#define TOR_ANCHOR_X_Y  244.0
+#define TOR_ANCHOR_X_E0  241.0 //TOR_ANCHOR_X_Y
 #define TOR_HEIGHT      210.0 //verify this value
 #define TOR_DIAGONAL_2D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0)
 #define TOR_DIAGONAL_3D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + TOR_HEIGHT * TOR_HEIGHT)
@@ -1229,7 +1234,7 @@
  * Turn on with the command 'M111 S32'.
  * NOTE: Requires a lot of PROGMEM!
  */
-#define DEBUG_LEVELING_FEATURE
+//#define DEBUG_LEVELING_FEATURE
 
 #if ANY(MESH_BED_LEVELING, AUTO_BED_LEVELING_BILINEAR, AUTO_BED_LEVELING_UBL)
   // Gradually reduce leveling correction until a set height is reached,
@@ -1357,6 +1362,11 @@
 #define MANUAL_Y_HOME_POS TOR_ANCHOR_X_Y
 #define MANUAL_Z_HOME_POS TOR_DIAGONAL_2D
 #define MANUAL_E0_HOME_POS TOR_ANCHOR_X_E0
+
+#define ANCHOR_X_POS {0, TOR_ANCHOR_X_Y, TOR_DIAGONAL_2D, TOR_ANCHOR_X_E0}
+#define ANCHOR_Y_POS {TOR_ANCHOR_X_Y, 0, TOR_ANCHOR_X_E0, TOR_DIAGONAL_2D}
+#define ANCHOR_Z_POS {TOR_DIAGONAL_2D, TOR_ANCHOR_X_E0, 0, TOR_ANCHOR_X_Y}
+#define ANCHOR_E0_POS {TOR_ANCHOR_X_E0, TOR_DIAGONAL_2D, TOR_ANCHOR_X_Y, 0}
 
 // Use "Z Safe Homing" to avoid homing with a Z probe outside the bed area.
 //
@@ -2213,17 +2223,17 @@
 // Support for Adafruit Neopixel LED driver
 #define NEOPIXEL_LED
 #if ENABLED(NEOPIXEL_LED)
-  #define NEOPIXEL_TYPE   NEO_GRB // NEO_GRBW / NEO_GRB - four/three channel driver type (defined in Adafruit_NeoPixel.h)
-  #define NEOPIXEL_PIN    SERVO0_PIN       // LED driving pin
+  #define NEOPIXEL_TYPE   (NEO_GRB + NEO_KHZ800) // NEO_GRBW / NEO_GRB - four/three channel driver type (defined in Adafruit_NeoPixel.h)
+  //#define NEOPIXEL_PIN    PA1       // LED driving pin
   //#define NEOPIXEL2_TYPE NEOPIXEL_TYPE
   //#define NEOPIXEL2_PIN    5
-  #define NEOPIXEL_PIXELS 144       // Number of LEDs in the strip, larger of 2 strips if 2 neopixel strips are used
+  #define NEOPIXEL_PIXELS 8       // Number of LEDs in the strip, larger of 2 strips if 2 neopixel strips are used
   #define NEOPIXEL_IS_SEQUENTIAL   // Sequential display for temperature change - LED by LED. Disable to change all LEDs at once.
-  #define NEOPIXEL_BRIGHTNESS 127  // Initial brightness (0-255)
-  //#define NEOPIXEL_STARTUP_TEST  // Cycle through colors at startup
+  #define NEOPIXEL_BRIGHTNESS 255  // Initial brightness (0-255)
+  #define NEOPIXEL_STARTUP_TEST  // Cycle through colors at startup
 
   // Use a single Neopixel LED for static (background) lighting
-  //#define NEOPIXEL_BKGD_LED_INDEX  0               // Index of the LED to use
+  //#define NEOPIXEL_BKGD_LED_INDEX  5               // Index of the LED to use
   //#define NEOPIXEL_BKGD_COLOR { 255, 255, 255, 0 } // R, G, B, W
 #endif
 

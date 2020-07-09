@@ -44,7 +44,27 @@
  *   M150 P127       ; Set LED 50% brightness
  *   M150 P          ; Set LED full brightness
  */
-void GcodeSuite::M150() {
+void GcodeSuite::M150() {  
+
+  /*leds.set_color(MakeLEDColor(
+    parser.seen('R') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('U') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('B') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('W') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
+    parser.seen('P') ? (parser.has_value() ? parser.value_byte() : 255) : neo.brightness()
+  ));
+  return;*/
+
+  //neo.init();
+  //return;
+  
+  //safe_delay(1000);
+  //neo.set_color_startup(neo.Color(0, 0, 255, 0));  // blue
+  //safe_delay(1000);
+  //neo.set_color(neo.Color(0, 0, 0, 0));
+  //safe_delay(1000);
+  //return;
+
   LEDColor color = MakeLEDColor(
     parser.seen('R') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
     parser.seen('U') ? (parser.has_value() ? parser.value_byte() : 255) : 0,
@@ -75,7 +95,14 @@ void GcodeSuite::M150() {
     }
   }
   else {
-    leds.set_color(color);
+    if (color == LEDColorOff()) {
+      SERIAL_ECHOPGM("clearing LED strip...");
+      SERIAL_EOL();
+      neo.clear();
+    }
+    else {
+      leds.set_color(color);
+    }
   }
 }
 
