@@ -617,6 +617,7 @@ void GcodeSuite::G28_TOR() {
   float hp = 1.5 * X_BED_SIZE;
   float tightenPosition = 0;
   float releasePositionOffset = 2;
+  float releasePositionBeforeFinal = 20;
   float releaseAnchorBeforeHomingPosition = 20;
   
   //N: Homing modes
@@ -631,13 +632,17 @@ void GcodeSuite::G28_TOR() {
   const int16_t tightenThreshold = parser.seen('P') ? (parser.has_value() ? parser.value_int() : defaultTightenThreshold) : defaultTightenThreshold;
 
   //S: stallguard threshold for anchor moves
-  const int16_t defaultAnchorThreshold = 90;
+  const int16_t defaultAnchorThreshold = 70;
   const int16_t anchorThreshold = parser.seen('S') ? (parser.has_value() ? parser.value_int() : defaultAnchorThreshold) : defaultAnchorThreshold;
+  
+  //F: stallguard threshold for final anchor moves
+  const int16_t defaultFinalThreshold = 110;
+  const int16_t finalThreshold = parser.seen('F') ? (parser.has_value() ? parser.value_int() : defaultFinalThreshold) : defaultFinalThreshold;
   
   //A: anchor axis (0, 1, 2, 3), if missing X_AXIS is tightened
   const AxisEnum anchor_axis = (AxisEnum)(parser.seen('A') ? (parser.has_value() ? parser.value_int() : X_AXIS) : X_AXIS);
 
-  //A: tighten axis (0, 1, 2, 3), if missing all axis are tightened
+  //T: tighten axis (0, 1, 2, 3), if missing all axis are tightened
   const AxisEnum tighten_axis = (AxisEnum)(parser.seen('T') ? (parser.has_value() ? parser.value_int() : ALL_AXES) : ALL_AXES);
 
   // Wait for planner moves to finish!
@@ -679,6 +684,13 @@ void GcodeSuite::G28_TOR() {
 
     tor_set_position(hp);
     move_with_stallGuard(anchor_axis, tightenPosition, anchorThreshold);
+    
+    //release anchor axis and tighten again with final threshold
+    tor_set_position(0);
+    tor_move_axis(anchor_axis, releasePositionBeforeFinal);
+    safe_delay(500);
+    tor_set_position(hp);
+    move_with_stallGuard(anchor_axis, tightenPosition, finalThreshold);
     
     if (anchor_axis != X_AXIS) ENABLE_AXIS_X();
     if (anchor_axis != Y_AXIS) ENABLE_AXIS_Y();
