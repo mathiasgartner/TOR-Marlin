@@ -545,6 +545,15 @@ void tor_move_to(float x, float y, float z, float e) {
   tor_move_to_current_position();
 }
 
+void tor_move_to(AxisEnum axis, float anchor, float diagonal, float offDiagonal) {
+  float x, y, z, e;
+  x = axis == X_AXIS ? anchor : (axis == Z_AXIS ? diagonal : offDiagonal);
+  y = axis == Y_AXIS ? anchor : (axis == E_AXIS ? diagonal : offDiagonal);
+  z = axis == Z_AXIS ? anchor : (axis == X_AXIS ? diagonal : offDiagonal);
+  e = axis == E_AXIS ? anchor : (axis == Y_AXIS ? diagonal : offDiagonal);
+  tor_move_to(x, y, z, e);
+}
+
 void tor_set_position(float x, float y, float z, float e) {  
   current_position.set(x, y, z, e);
   sync_plan_position();
@@ -627,7 +636,6 @@ void GcodeSuite::G28_TOR() {
   float hp = 1.5 * X_BED_SIZE;
   float tightenPosition = 0;
   float releasePositionOffset = 2;
-  float releasePositionBeforeFinal = 20;
   float releaseAnchorBeforeHomingPosition = 20;
   
   //N: Homing modes
@@ -726,18 +734,18 @@ void GcodeSuite::G28_TOR() {
       if (anchor_axis != (AxisEnum)i) move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
     }
 
-    int sleepTime = 50;
+    int sleepTime = 20;
     for (int i = 0; i < repeatExtraSteps; i++) {
-      SERIAL_ECHOLNPAIR("############### 1.8");  
+      SERIAL_ECHOLNPAIR("############### 1.9");  
       SERIAL_ECHOLNPAIR("############### do extra homing step");  
       planner.synchronize();
       safe_delay(sleepTime);
       tor_set_position(0);
-      float pos = 20;
-      tor_move_to(pos * extraStepRatio, 10, -pos, 10);
+      float pos = 20; 
+      tor_move_to(anchor_axis, pos * extraStepRatio, -pos, 10);
       safe_delay(sleepTime);
-      tor_set_position(0);      
-      tor_move_to(0, 0, 0.5, 0);  
+      tor_set_position(0);  
+      tor_move_to(anchor_axis, 0, 0.5, 0);
       safe_delay(sleepTime);    
       tor_set_position(0);
       move_with_stallGuard(anchor_axis, pos * (-extraStepRatioBack), finalThreshold, pos * extraStepRatioBack, 0);    
@@ -753,6 +761,7 @@ void GcodeSuite::G28_TOR() {
     tor_set_position(0);
     tor_move_axis(anchor_axis, 1);
 
+    //set anchor home position as current position position
     switch (anchor_axis) {
       case X_AXIS: tor_set_position(ANCHOR_X_POS); break;
       case Y_AXIS: tor_set_position(ANCHOR_Y_POS); break;
