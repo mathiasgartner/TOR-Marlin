@@ -630,7 +630,7 @@ void move_with_stallGuard(AxisEnum axis, float position, int16_t threshold, floa
  * G28_TOR: Home TOR setup to specified anchor point
  */
 void GcodeSuite::G28_TOR() {
-  //G28 S50 P140 F68 R8 D1.05 B1.15
+  //G28 A0 S50 P140 F68 R8 D1.05 B1.15
   SERIAL_ECHOLN("######## G28_TOR version 1.5 ########");
   
   float hp = 1.5 * X_BED_SIZE;
