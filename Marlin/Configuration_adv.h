@@ -1628,7 +1628,10 @@
 //
 // G1 segmented move
 //
-#define MM_PER_LINEAR_SEGMENT 3.0
+#define MM_PER_LINEAR_SEGMENT 2.0
+#define SLOWDOWN_N_SEGMENTS 5
+#define SLOWDOWN_FACTORS { 0.258819, 0.5, 0.707107,0.866025, 0.965926 } //cosine
+#define MINIMUM_SLOWDOWN_FR 20
 
 //
 // G2/G3 Arc Support
@@ -2758,7 +2761,7 @@
 /**
  * Include capabilities in M115 output
  */
-#define EXTENDED_CAPABILITIES_REPORT
+//#define EXTENDED_CAPABILITIES_REPORT
 
 /**
  * Expected Printer Check

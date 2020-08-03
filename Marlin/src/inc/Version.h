@@ -82,7 +82,7 @@
  * providing the source code to your customers.)
  */
 #ifndef SOURCE_CODE_URL
-  #define SOURCE_CODE_URL "https://github.com/MarlinFirmware/Marlin"
+  #define SOURCE_CODE_URL "https://github.com/MathiasGartner/TOR-Marlin/tree/tor-marlin"
 #endif
 
 /**
@@ -120,3 +120,5 @@
   #define  USB_DEVICE_PRODUCT_NAME        MACHINE_NAME
 #endif
 #define  USB_DEVICE_SERIAL_NAME           "123985739853"
+
+#define TOR_VERSION "1.0"

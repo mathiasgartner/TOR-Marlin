@@ -688,12 +688,12 @@ void GcodeSuite::G28_TOR() {
     if (tighten_axis == ALL_AXES) {
       LOOP_XYZE(i) {
         tor_set_position(hp);
-        move_with_stallGuard((AxisEnum)i, tightenPosition, defaultTightenThreshold);
+        move_with_stallGuard((AxisEnum)i, tightenPosition, tightenThreshold);
       }
     }
     else {
       tor_set_position(hp);
-      move_with_stallGuard(tighten_axis, tightenPosition, defaultTightenThreshold);
+      move_with_stallGuard(tighten_axis, tightenPosition, tightenThreshold);
     }
   }
   

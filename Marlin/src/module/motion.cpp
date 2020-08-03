@@ -1028,13 +1028,31 @@ bool line_to_destination_tor_segmented() {
   xyz_pos_t cartRaw = cartStart;
   xyze_pos_t raw;
 
-  // Calculate and execute the segments
+  // Calculate and execute the segments  
   millis_t next_idle_ms = millis() + 200UL;
+  uint16_t totalSegments = segments;
+  float fr = scaled_fr_mm_s;
+  constexpr float slowdown_factors[] = SLOWDOWN_FACTORS;
   while (--segments) {
+    uint16_t s = totalSegments - segments;
+    if (segments < s) {
+      s = segments;
+    }
+    if(s <= SLOWDOWN_N_SEGMENTS) {
+      //fr = scaled_fr_mm_s * SLOWDOWN_FACTOR * s;
+      fr = scaled_fr_mm_s * slowdown_factors[s-1];
+    }
+    else {
+      fr = scaled_fr_mm_s;
+    }  
+    if (fr < MINIMUM_SLOWDOWN_FR && scaled_fr_mm_s > MINIMUM_SLOWDOWN_FR) {
+      fr = MINIMUM_SLOWDOWN_FR;
+    }    
+    SERIAL_ECHOLNPAIR("## fr: ", fr);
     segment_idle(next_idle_ms);
     cartRaw += segment_distance;
     raw = cartesian_to_cords(cartRaw);
-    if (!planner.buffer_line(raw, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+    if (!planner.buffer_line(raw, fr, active_extruder, cartesian_segment_mm
       #if ENABLED(SCARA_FEEDRATE_SCALING)
         , inv_duration
       #endif
@@ -1043,7 +1061,7 @@ bool line_to_destination_tor_segmented() {
   }
 
   // Ensure last segment arrives at target location.
-  planner.buffer_line(destination, scaled_fr_mm_s, active_extruder, cartesian_segment_mm
+  planner.buffer_line(destination, fr, active_extruder, cartesian_segment_mm
     #if ENABLED(SCARA_FEEDRATE_SCALING)
       , inv_duration
     #endif
