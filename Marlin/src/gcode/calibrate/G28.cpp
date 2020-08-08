@@ -639,10 +639,10 @@ void GcodeSuite::G28_TOR() {
   float releaseAnchorBeforeHomingPosition = 20;
   
   //N: Homing modes
-  //0: first tighten all cords, then move to anchor (default X) while pulling on other cords
-  //1: first go to center, then move to anchor (default X) while pulling on other cords. do this only when position is nearly known!
-  //2: only tighten cords
-  //3: only anchor axis  
+  //0: full homing with repeated advances (corresponds to first mode 2 then mode 3)
+  //1: first go to center, then mode 0. do this only when position is nearly known!
+  //2: first tighten all cords, then move to anchor (default X) while pulling on other cords
+  //3: do repeated advances. need to be near anchor point 
   const uint8_t mode = parser.seen('N') ? (parser.has_value() ? parser.value_int() : 0) : 0;
   
   //P: stallguard threshold for tighten moves
@@ -683,7 +683,7 @@ void GcodeSuite::G28_TOR() {
 
   //TODO: try to move all axis at the same time and just stop the one that hit an endstop. have a look at quick_stop in Stepper::endstop_triggered
   //tighten all or specified axis
-  if (mode == 0 || mode == 2) {  
+  if (mode == 0 || mode == 1 || mode == 2) {  
     report_current_position();
     if (tighten_axis == ALL_AXES) {
       LOOP_XYZE(i) {
@@ -698,7 +698,7 @@ void GcodeSuite::G28_TOR() {
   }
   
   //move to anchor and pull on other cords
-  if (mode == 0 || mode == 1 || mode == 3) {
+  if (mode == 0 || mode == 1 || mode == 2) {
     report_current_position();
     
     if (anchor_axis != X_AXIS) DISABLE_AXIS_X();
@@ -723,7 +723,10 @@ void GcodeSuite::G28_TOR() {
     if (anchor_axis != Y_AXIS) ENABLE_AXIS_Y();
     if (anchor_axis != Z_AXIS) ENABLE_AXIS_Z();
     if (anchor_axis != E_AXIS) ENABLE_AXIS_E0();
-    
+  }
+
+  if (mode == 0 || mode == 1 || mode == 3)
+  {
     //release anchor axis slightly
     tor_set_position(0);
     tor_move_axis(anchor_axis, releasePositionOffset);
