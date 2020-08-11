@@ -986,7 +986,7 @@ xyze_float_t cartesian_to_cords(xyz_float_t cartesian) {
 
 //TOR: do a segmented move 
 //adapted from line_to_destination_kinematic()
-bool line_to_destination_tor_segmented() {  
+bool line_to_destination_tor_segmented(bool useSlowDownStart=true, bool useSlowDownEnd=true) {  
   // Get the top feedrate of the move in the XY plane
   const float scaled_fr_mm_s = MMS_SCALED(feedrate_mm_s);
   
@@ -1034,21 +1034,28 @@ bool line_to_destination_tor_segmented() {
   float fr = scaled_fr_mm_s;
   constexpr float slowdown_factors[] = SLOWDOWN_FACTORS;
   while (--segments) {
-    uint16_t s = totalSegments - segments;
-    if (segments < s) {
-      s = segments;
+    if (useSlowDownStart || useSlowDownEnd) {
+      uint16_t s = SLOWDOWN_N_SEGMENTS + 1;
+      if (useSlowDownStart) {
+        s = totalSegments - segments;
+      }
+      if (useSlowDownEnd) {
+        if (segments < s) {
+          s = segments;
+        }
+      }
+      if(s <= SLOWDOWN_N_SEGMENTS) {
+        //fr = scaled_fr_mm_s * SLOWDOWN_FACTOR * s;
+        fr = scaled_fr_mm_s * slowdown_factors[s-1];
+      }
+      else {
+        fr = scaled_fr_mm_s;
+      }  
+      if (fr < MINIMUM_SLOWDOWN_FR && scaled_fr_mm_s > MINIMUM_SLOWDOWN_FR) {
+        fr = MINIMUM_SLOWDOWN_FR;
+      }    
+      //SERIAL_ECHOLNPAIR("## slowdown fr: ", fr);
     }
-    if(s <= SLOWDOWN_N_SEGMENTS) {
-      //fr = scaled_fr_mm_s * SLOWDOWN_FACTOR * s;
-      fr = scaled_fr_mm_s * slowdown_factors[s-1];
-    }
-    else {
-      fr = scaled_fr_mm_s;
-    }  
-    if (fr < MINIMUM_SLOWDOWN_FR && scaled_fr_mm_s > MINIMUM_SLOWDOWN_FR) {
-      fr = MINIMUM_SLOWDOWN_FR;
-    }    
-    SERIAL_ECHOLNPAIR("## fr: ", fr);
     segment_idle(next_idle_ms);
     cartRaw += segment_distance;
     raw = cartesian_to_cords(cartRaw);
@@ -1234,7 +1241,7 @@ void prepare_line_to_destination() {
     #elif IS_KINEMATIC
       line_to_destination_kinematic()
     #else
-      (parser.seen('S') && line_to_destination_tor_segmented()) 
+      (parser.seen('S') && line_to_destination_tor_segmented(!parser.seen('A'), !parser.seen('B'))) 
       ||
       (line_to_destination_cartesian())
     #endif

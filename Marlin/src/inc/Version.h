@@ -121,4 +121,4 @@
 #endif
 #define  USB_DEVICE_SERIAL_NAME           "123985739853"
 
-#define TOR_VERSION "1.0"
+#define TOR_VERSION "1.1"
