@@ -735,7 +735,7 @@
  * Override with M92
  *                                      X, Y, Z, E0 [, E1[, E2...]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT    { 72.7565, 72.7565, 72.7565, 72.7565 }
+#define DEFAULT_AXIS_STEPS_PER_UNIT    { 70.7355, 70.7355, 70.7355, 70.7355 }
 
 /**
  * Default Max Feed Rate (mm/s)
@@ -1098,8 +1098,8 @@
 // @section machine
 
 //TOR dimensions
-#define TOR_ANCHOR_X_Y  247.0
-#define TOR_ANCHOR_X_E0  247.0 //TOR_ANCHOR_X_Y
+#define TOR_ANCHOR_X_Y  249.0
+#define TOR_ANCHOR_X_E0  249.0 //TOR_ANCHOR_X_Y
 #define TOR_HEIGHT      210.0 //verify this value
 #define TOR_DIAGONAL_2D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0)
 #define TOR_DIAGONAL_3D SQRT(TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + TOR_HEIGHT * TOR_HEIGHT)
