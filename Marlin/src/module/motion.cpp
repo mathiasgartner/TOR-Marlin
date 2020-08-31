@@ -961,6 +961,8 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
 //calculate cartesian coordinates from three cord lengths (x, y and e length)
 xyz_float_t cords_to_cartesian(xyze_float_t cords) {
   xyz_float_t cartesian;
+  float factor = 1.0 / 1.015;
+  cords *= factor;
   xyze_float_t c2 = cords * cords;
   cartesian.x = (TOR_ANCHOR_X_Y * TOR_ANCHOR_X_Y + c2.x - c2.y) / (2.0 * TOR_ANCHOR_X_Y);
   cartesian.y = (TOR_ANCHOR_X_E0 * TOR_ANCHOR_X_E0 + c2.x - c2.e) / (2.0 * TOR_ANCHOR_X_E0);
@@ -972,15 +974,16 @@ xyz_float_t cords_to_cartesian(xyze_float_t cords) {
 
 //calculate cord lengths from cartesian coordinates
 xyze_float_t cartesian_to_cords(xyz_float_t cartesian) {
+  float factor = 1.015;
   xyze_float_t cords;
   xyz_float_t boxSize = {TOR_ANCHOR_X_Y, TOR_ANCHOR_X_E0, TOR_HEIGHT};
   xyz_float_t diffs = boxSize - cartesian;
   xyz_float_t c2 = cartesian * cartesian;
   xyz_float_t d2 = diffs * diffs;
-  cords.x = SQRT(c2.x + c2.y + c2.z);
-  cords.y = SQRT(d2.x + c2.y + c2.z);
-  cords.z = SQRT(d2.x + d2.y + c2.z);
-  cords.e = SQRT(c2.x + d2.y + c2.z);
+  cords.x = SQRT(c2.x + c2.y + c2.z) * factor;
+  cords.y = SQRT(d2.x + c2.y + c2.z) * factor;
+  cords.z = SQRT(d2.x + d2.y + c2.z) * factor;
+  cords.e = SQRT(c2.x + d2.y + c2.z) * factor;
   return cords;
 }
 

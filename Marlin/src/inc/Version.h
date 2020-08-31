@@ -121,4 +121,5 @@
 #endif
 #define  USB_DEVICE_SERIAL_NAME           "123985739853"
 
-#define TOR_VERSION "1.1"
+//Version 1.2 is for video capture
+#define TOR_VERSION "1.2"
