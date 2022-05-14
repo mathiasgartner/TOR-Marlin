@@ -122,4 +122,5 @@
 #define  USB_DEVICE_SERIAL_NAME           "123985739853"
 
 //Version 1.2 is for video capture
-#define TOR_VERSION "1.2"
+//Version 1.3 introduces cord factors
+#define TOR_VERSION "1.3"
