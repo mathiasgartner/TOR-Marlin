@@ -735,7 +735,7 @@
  * Override with M92
  *                                      X, Y, Z, E0 [, E1[, E2...]]
  */
-#define DEFAULT_AXIS_STEPS_PER_UNIT    { 68.8238, 68.8238, 68.8238, 68.8238 }
+#define DEFAULT_AXIS_STEPS_PER_UNIT    { 70.2477, 70.2477, 70.2477, 70.2477 }
 
 /**
  * Default Max Feed Rate (mm/s)
@@ -1107,7 +1107,7 @@
 //cord correction for increasing pulley radius
 #define TOR_PI 3.14159265359
 #define TOR_2PI (2.0 * TOR_PI)
-#define PULLEY_RADIUS 7.4
+#define PULLEY_RADIUS 7.25
 #define CORD_THICKNESS 0.22
 #define CORD_LAYERS_ON_PULLEY 6.0
 #define PULLEY_RADIUS_2PI (TOR_2PI * PULLEY_RADIUS)
