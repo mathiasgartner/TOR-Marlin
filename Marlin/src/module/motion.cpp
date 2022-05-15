@@ -959,8 +959,8 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
 #endif // !UBL_SEGMENTED
 
 float fromModifiedCordLength(float c) {
-  float ub = c / (2.0 * PI * PULLEY_RADIUS);
-  float cModified = 2.0 * PI * PULLEY_RADIUS * ub - CORD_THICKNESS * PI * ub * ub;
+  float ub = c / PULLEY_RADIUS_2PI;  
+  float cModified = PULLEY_RADIUS_2PI * ub - CORD_THICKNESS_EFFECTIVE_PI * ub * ub;
   return cModified;
 }        
 
@@ -980,9 +980,11 @@ xyz_float_t cords_to_cartesian(xyze_float_t cords) {
   return cartesian;
 }
 
-float toModifiedCordLength(float c) {
-  float uw = PULLEY_RADIUS_OVER_CORD_THICKNESS - SQRT(PULLEY_RADIUS_OVER_CORD_THICKNESS_SQR - c / CORD_THICKNESS_PI);
-  float cModified = 2.0 * PI * PULLEY_RADIUS * uw;
+float toModifiedCordLength(float c) {  
+  float tmp = PULLEY_RADIUS_OVER_CORD_THICKNESS_EFFECTIVE_SQR - c / CORD_THICKNESS_EFFECTIVE_PI;
+  NOLESS(tmp, 0.0f);
+  float uw = PULLEY_RADIUS_OVER_CORD_THICKNESS_EFFECTIVE - SQRT(tmp);
+  float cModified = PULLEY_RADIUS_2PI * uw;
   return cModified;
 }        
 
@@ -1027,6 +1029,12 @@ bool line_to_destination_tor_segmented(bool useSlowDownStart=true, bool useSlowD
   SERIAL_ECHOPAIR("# do a segmented move with ", segments, " segments");
   SERIAL_ECHOLN();
   /*
+  SERIAL_ECHO("## current_position: ");
+  report_logical_position(current_position);
+  SERIAL_ECHOLN();
+  SERIAL_ECHO("## destination: ");
+  report_logical_position(destination);
+  SERIAL_ECHOLN();
   SERIAL_ECHO("## cartStart: ");
   report_logical_position(cartStart);
   SERIAL_ECHOLN();
