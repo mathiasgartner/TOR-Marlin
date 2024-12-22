@@ -3,7 +3,7 @@ Import("env")
 
 STM32_FLASH_SIZE = 256
 
-for define in env['CPPDEFINES']:
+for define in env['CPPDEFINES'].copy():
     if define[0] == "VECT_TAB_ADDR":
         env['CPPDEFINES'].remove(define)
     if define[0] == "STM32_FLASH_SIZE":
