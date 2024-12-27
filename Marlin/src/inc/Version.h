@@ -123,4 +123,5 @@
 
 //Version 1.2 is for video capture
 //Version 1.3 introduces cord factors
-#define TOR_VERSION "1.3"
+//Version 1.4 enable MONITOR_DRIVER_STATUS for OTPW
+#define TOR_VERSION "1.4"
